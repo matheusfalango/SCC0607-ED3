@@ -1,15 +1,10 @@
+// 15479691 Matheus Soares Falango
+// 15578973 Murilo Gonzales Vieira
+
 #include "programaTrab.h"
 #include "utilidades.h"
-#include <string.h>
 
-// Função auxiliar para remover espaços em branco do final de uma string
-void trim(char *str) {
-    int n = strlen(str);
-    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
-        n--;
-    }
-    str[n] = '\0';
-}
+// Programa principal
 
 // Implementação da Funcionalidade 1: Criação de Arquivo de Índice Primário
 void criarArquivoIndicePrimario(char *nomeArquivoIndice) {
@@ -93,43 +88,45 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
 
         // idPessoa
         token = my_strtok(rest, ",", &rest);
-        record.idPessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
-
-        // idadePessoa
-        token = my_strtok(rest, ",", &rest);
-        record.idadePessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        record.idPessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
 
         // nomePessoa
         char nomePessoa_buffer[256];
         token = my_strtok(rest, ",", &rest);
-        if (token != NULL && strcmp(token, "NULO") != 0) {
+        if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomePessoa_buffer, token);
             trim(nomePessoa_buffer);
             record.nomePessoa = strdup(nomePessoa_buffer);
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
         } else {
-            record.nomePessoa = NULL;
+            *record.nomePessoa = LIXO_CHAR;
             record.tamanhoNomePessoa = 0;
         }
+
+        // idadePessoa
+        token = my_strtok(rest, ",", &rest);
+        record.idadePessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
 
         // nomeUsuario
         char nomeUsuario_buffer[256];
         token = my_strtok(rest, ",", &rest);
-        if (token != NULL && strcmp(token, "NULO") != 0) {
+        if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomeUsuario_buffer, token);
             trim(nomeUsuario_buffer);
             record.nomeUsuario = strdup(nomeUsuario_buffer);
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
         } else {
-            record.nomeUsuario = NULL;
+            *record.nomeUsuario = LIXO_CHAR;
             record.tamanhoNomeUsuario = 0;
         }
+        // Ao colocar nulo no ponteiro da string, nao aloca no disco a string
+        // logo somente é guardado o tamanho da string
 
         // Calcular tamanho do registro
         // removido (1) + tamanhoRegistro (4) + idPessoa (4) + idadePessoa (4) + tamanhoNomePessoa (4) + tamanhoNomeUsuario (4)
         record.tamanhoRegistro = 1 + 4 + 4 + 4 + 4 + 4;
-        if (record.nomePessoa != NULL) record.tamanhoRegistro += record.tamanhoNomePessoa;
-        if (record.nomeUsuario != NULL) record.tamanhoRegistro += record.tamanhoNomeUsuario;
+        if (*record.nomePessoa != LIXO_CHAR) record.tamanhoRegistro += record.tamanhoNomePessoa;
+        if (*record.nomeUsuario != LIXO_CHAR) record.tamanhoRegistro += record.tamanhoNomeUsuario;
 
         // Escrever registro no arquivo pessoa.bin
         long long current_byte_offset = ftell(pessoa_bin_file);
@@ -138,9 +135,9 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomePessoa != NULL) fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+        if (record.tamanhoNomePessoa != 0 && *record.nomePessoa != LIXO_CHAR) fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
         fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomeUsuario != NULL) fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        if (record.tamanhoNomeUsuario != 0 && *record.nomeUsuario != LIXO_CHAR) fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
 
         // Atualizar cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
@@ -154,8 +151,8 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         fwrite(&index_record.idPessoa, sizeof(int), 1, indice_bin_file);
         fwrite(&index_record.byteOffset, sizeof(long long), 1, indice_bin_file);
 
-        if (record.nomePessoa != NULL) free(record.nomePessoa);
-        if (record.nomeUsuario != NULL) free(record.nomeUsuario);
+        if (*record.nomePessoa != LIXO_CHAR) free(record.nomePessoa);
+        if (*record.nomeUsuario != LIXO_CHAR) free(record.nomeUsuario);
     }
 
     // Atualizar cabeçalho final do arquivo pessoa.bin
@@ -226,41 +223,52 @@ void buscarPessoaComIndice(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin
 
         PessoaRecord record;
         fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
+        if (record.removido == REMOVIDO_CHAR) {
+            printf("Registro inexistente.\n");
+
+            free(record.nomePessoa);
+            free(record.nomeUsuario);
+
+            fclose(pessoa_bin_file);
+            fclose(indice_bin_file);
+        }
+        // Logicamente removido, evitando realizar operacoes desnecessarias
+
         fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
         fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-        fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
 
-        record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
-        fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
-        record.nomePessoa[record.tamanhoNomePessoa] = '\0';
+        fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+        if (record.tamanhoNomePessoa > 0 && *record.nomePessoa != LIXO_CHAR) {
+            record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
+            fread(&record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+        }   // Leitura somente se existir o nome da pessoa
 
         fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
-        fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
-        record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
-
+        if (record.tamanhoNomeUsuario > 0 && *record.nomeUsuario != LIXO_CHAR) {
+            record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario);
+            fread(&record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        }   // Leitura somente se existir o nome de usuario
+        
         if (record.removido == NAO_REMOVIDO_CHAR) {
-            printf("Registro encontrado!\n");
-            printf("ID: %d\n", record.idPessoa);
-            if (record.idadePessoa != -1) {
-                printf("Idade: %d\n", record.idadePessoa);
-            } else {
-                printf("Idade: -\n");
-            }
+            //printf("Registro encontrado!\n");
+            printf("Dados da pessoa de codigo %d\n", record.idPessoa);
             if (record.tamanhoNomePessoa > 0) {
                 printf("Nome: %s\n", record.nomePessoa);
             } else {
                 printf("Nome: -\n");
+            }
+            if (record.idadePessoa != -1) {
+                printf("Idade: %d\n", record.idadePessoa);
+            } else {
+                printf("Idade: -\n");
             }
             if (record.tamanhoNomeUsuario > 0) {
                 printf("Usuario: %s\n", record.nomeUsuario);
             } else {
                 printf("Usuario: -\n");
             }
-        } else {
-            printf("Registro inexistente.\n"); // Logicamente removido
-        }
+        } // sempre vai entrar neste if
 
         free(record.nomePessoa);
         free(record.nomeUsuario);

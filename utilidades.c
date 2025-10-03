@@ -1,3 +1,8 @@
+/*
+Implementação das funções implementadas no trabalho para facilitar
+alguns processos, a exemplo da manipulação de string
+*/
+
 #include "utilidades.h"
 
 /*
@@ -55,7 +60,6 @@ void scan_quote_string(char *str) {
 }
 
 
-
 char *my_strtok(char *str, const char *delim, char **saveptr) {
     char *token;
     if (str != NULL) {
@@ -65,7 +69,7 @@ char *my_strtok(char *str, const char *delim, char **saveptr) {
         return NULL;
     }
 
-    // Skip leading delimiters
+    // Pular delimitadores
     *saveptr += strspn(*saveptr, delim);
     if (**saveptr == '\0') {
         return NULL;
@@ -74,11 +78,21 @@ char *my_strtok(char *str, const char *delim, char **saveptr) {
     token = *saveptr;
     *saveptr = strpbrk(token, delim);
 
-    if (*saveptr != NULL) {
+		// Adiciona um '\0' no final das strings lidas
+    /*if (*saveptr != NULL) {
         **saveptr = '\0';
         (*saveptr)++;
-    }
+    }*/
 
     return token;
 }
 
+
+// Função auxiliar para remover espaços em branco do final de uma string
+void trim(char *str) {
+    int n = strlen(str);
+    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
+        n--;
+    }
+    //str[n] = '\0';
+}

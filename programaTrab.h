@@ -23,10 +23,10 @@ typedef struct {
     char removido; // '0' não removido, '1' removido
     int tamanhoRegistro;
     int idPessoa;
-    int idadePessoa;
     int tamanhoNomePessoa;
-    int tamanhoNomeUsuario;
     char *nomePessoa;
+    int idadePessoa;
+    int tamanhoNomeUsuario;
     char *nomeUsuario;
 } PessoaRecord;
 
@@ -35,7 +35,7 @@ typedef struct {
 
 typedef struct {
     char status; // '0' inconsistente, '1' consistente
-    // 11 bytes de lixo
+    char lixo[11]; // 11 bytes de lixo
 } IndexHeader;
 
 typedef struct {
