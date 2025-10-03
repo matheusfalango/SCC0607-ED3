@@ -70,10 +70,14 @@ char *my_strtok(char *str, const char *delim, char **saveptr) {
     }
 
     // Pular delimitadores
-    *saveptr += strspn(*saveptr, delim);
+    *saveptr += strcspn(*saveptr, delim);
     if (**saveptr == '\0') {
         return NULL;
     }
+		if (strcmp(*saveptr, "") == 0) {
+				token = "";
+				*saveptr = strpbrk(token, delim);
+		}
 
     token = *saveptr;
     *saveptr = strpbrk(token, delim);
@@ -91,7 +95,7 @@ char *my_strtok(char *str, const char *delim, char **saveptr) {
 // Função auxiliar para remover espaços em branco do final de uma string
 void trim(char *str) {
     int n = strlen(str);
-    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
+    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\0')) {
         n--;
     }
     //str[n] = '\0';

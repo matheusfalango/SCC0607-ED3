@@ -89,7 +89,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         // idPessoa
         token = my_strtok(rest, ",", &rest);
         record.idPessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
-
+        
         // nomePessoa
         char nomePessoa_buffer[256];
         token = my_strtok(rest, ",", &rest);
@@ -99,6 +99,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
             record.nomePessoa = strdup(nomePessoa_buffer);
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
         } else {
+            record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
             *record.nomePessoa = LIXO_CHAR;
             record.tamanhoNomePessoa = 0;
         }
@@ -116,6 +117,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
             record.nomeUsuario = strdup(nomeUsuario_buffer);
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
         } else {
+            record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario);
             *record.nomeUsuario = LIXO_CHAR;
             record.tamanhoNomeUsuario = 0;
         }
@@ -239,15 +241,15 @@ void buscarPessoaComIndice(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin
         fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
 
         fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (record.tamanhoNomePessoa > 0 && *record.nomePessoa != LIXO_CHAR) {
+        if (record.tamanhoNomePessoa > 0) {
             record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
-            fread(&record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+            fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
         }   // Leitura somente se existir o nome da pessoa
 
         fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (record.tamanhoNomeUsuario > 0 && *record.nomeUsuario != LIXO_CHAR) {
+        if (record.tamanhoNomeUsuario > 0) {
             record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario);
-            fread(&record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+            fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
         }   // Leitura somente se existir o nome de usuario
         
         if (record.removido == NAO_REMOVIDO_CHAR) {
