@@ -43,10 +43,6 @@ typedef struct {
     long long byteOffset;
 } IndexRecord;
 
-// Protótipos das funções
-void binarioNaTela(char *nomeArquivoBinario);
-void trim(char *str);
-
 // Funcionalidade 1: Criação de Arquivo de Índice Primário
 void criarArquivoIndicePrimario(char *nomeArquivoIndice);
 

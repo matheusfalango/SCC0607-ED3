@@ -60,43 +60,45 @@ void scan_quote_string(char *str) {
 }
 
 
-char *my_strtok(char *str, const char *delim, char **saveptr) {
+char *novo_strtok(char *str, const char *delim, char **saveptr) {
     char *token;
+		// Inicializa se tiver um str para alocar a string lida
     if (str != NULL) {
         *saveptr = str;
     }
+		// Se chegar no fim da string, retorna null
     if (*saveptr == NULL || **saveptr == '\0') {
         return NULL;
     }
 
-    // Pular delimitadores
-    *saveptr += strcspn(*saveptr, delim);
-    if (**saveptr == '\0') {
-        return NULL;
-    }
-		if (strcmp(*saveptr, "") == 0) {
-				token = "";
-				*saveptr = strpbrk(token, delim);
-		}
-
     token = *saveptr;
-    *saveptr = strpbrk(token, delim);
-
-		// Adiciona um '\0' no final das strings lidas
-    /*if (*saveptr != NULL) {
-        **saveptr = '\0';
-        (*saveptr)++;
-    }*/
+		// Procura o próximo delimitador
+    char *next_delim = strpbrk(*saveptr, delim);
+    
+    if (next_delim != NULL) {
+        *next_delim = '\0';
+        *saveptr = next_delim + 1;
+    } else {
+        *saveptr = *saveptr + strlen(*saveptr);
+    }
 
     return token;
 }
 
 
-// Função auxiliar para remover espaços em branco do final de uma string
-void trim(char *str) {
-    int n = strlen(str);
+// Função auxiliar para remover caracteres especiais do final de uma string
+char *trim(char *str) {
+    int n = strlen(str); // n é o tamanho da str
     while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\0')) {
-        n--;
+				n--;
     }
-    //str[n] = '\0';
+
+		//Novo espaço para alocar a nova string sem os caracteres indesejados
+		char *new_str = (char*) malloc((n+1) * sizeof(char));
+		if (new_str == NULL) return NULL;
+
+		strncpy(new_str, str, n);
+		new_str[n] = '\0';
+
+		return new_str;
 }

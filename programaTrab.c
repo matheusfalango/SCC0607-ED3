@@ -87,16 +87,15 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         char *rest = line;
 
         // idPessoa
-        token = my_strtok(rest, ",", &rest);
+        token = novo_strtok(rest, ",", &rest);
         record.idPessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
         
         // nomePessoa
         char nomePessoa_buffer[256];
-        token = my_strtok(rest, ",", &rest);
+        token = novo_strtok(rest, ",", &rest);
         if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomePessoa_buffer, token);
-            trim(nomePessoa_buffer);
-            record.nomePessoa = strdup(nomePessoa_buffer);
+            record.nomePessoa = trim(nomePessoa_buffer);
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
         } else {
             record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
@@ -105,16 +104,15 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         }
 
         // idadePessoa
-        token = my_strtok(rest, ",", &rest);
+        token = novo_strtok(rest, ",", &rest);
         record.idadePessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
 
         // nomeUsuario
         char nomeUsuario_buffer[256];
-        token = my_strtok(rest, ",", &rest);
+        token = novo_strtok(rest, ",", &rest);
         if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomeUsuario_buffer, token);
-            trim(nomeUsuario_buffer);
-            record.nomeUsuario = strdup(nomeUsuario_buffer);
+            record.nomeUsuario = trim(nomeUsuario_buffer);
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
         } else {
             record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario);
@@ -153,8 +151,8 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         fwrite(&index_record.idPessoa, sizeof(int), 1, indice_bin_file);
         fwrite(&index_record.byteOffset, sizeof(long long), 1, indice_bin_file);
 
-        if (*record.nomePessoa != LIXO_CHAR) free(record.nomePessoa);
-        if (*record.nomeUsuario != LIXO_CHAR) free(record.nomeUsuario);
+        free(record.nomePessoa);
+        free(record.nomeUsuario);
     }
 
     // Atualizar cabeçalho final do arquivo pessoa.bin
@@ -239,7 +237,7 @@ void buscarPessoaComIndice(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin
         fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
         fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-
+        
         fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
         if (record.tamanhoNomePessoa > 0) {
             record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
