@@ -1,10 +1,16 @@
+// 15479691 Matheus Soares Falango
+// 15578973 Murilo Gonzales Vieira
+
 /*
 Implementação das funções implementadas no trabalho para facilitar
 alguns processos, a exemplo da manipulação de string
 */
 
 #include "utilidades.h"
+#include "ArvAVL.h"
 
+
+// Funções disponibilizadas para o projeto
 /*
 Função para imprimir dados salvos no arquivo em binário
 (util para comparar saida no run codes)
@@ -60,45 +66,75 @@ void scan_quote_string(char *str) {
 }
 
 
+// Funções desenvolvidas para o projeto
+void atualizaAVL(ARV* arv, int id, long long bOffset) {
+		insereNo(arv, id, bOffset);
+}
+
+
+void printCrescIndice(NO* raiz, FILE* indice_bin_file) {
+		if (raiz != NULL) {
+				printCrescIndice(raiz->esq, indice_bin_file);
+				fwrite(&raiz->id, sizeof(int), 1, indice_bin_file);
+				fwrite(&raiz->bOffset, sizeof(long long), 1, indice_bin_file);
+				printCrescIndice(raiz->dir, indice_bin_file);
+		}
+}
+
+
 char *novo_strtok(char *str, const char *delim, char **saveptr) {
     char *token;
-		// Inicializa se tiver um str para alocar a string lida
-    if (str != NULL) {
-        *saveptr = str;
-    }
+
+		if (str != NULL) {
+			*saveptr = str;
+		}
+
 		// Se chegar no fim da string, retorna null
     if (*saveptr == NULL || **saveptr == '\0') {
         return NULL;
     }
 
-    token = *saveptr;
-		// Procura o próximo delimitador
-    char *next_delim = strpbrk(*saveptr, delim);
-    
-    if (next_delim != NULL) {
-        *next_delim = '\0';
-        *saveptr = next_delim + 1;
-    } else {
-        *saveptr = *saveptr + strlen(*saveptr);
-    }
+		long int qtdDelimitadores = strspn(*saveptr, delim);
 
-    return token;
+		// Pulando possíveis delimitadores no inicio da str
+		if (qtdDelimitadores <= 1) {
+				token = str;
+				*saveptr = strpbrk(token, delim);
+				
+				if (*saveptr != NULL) {
+						**saveptr = '\0';
+						(*saveptr)++;
+				}
+		} else if (qtdDelimitadores >= 2) {
+				token = str;
+				*saveptr = strpbrk(token, delim);
+
+				if (*saveptr != NULL) {
+				**saveptr = '\0';
+				(*saveptr)++;
+				}
+		}
+
+		return token;
 }
 
 
 // Função auxiliar para remover caracteres especiais do final de uma string
 char *trim(char *str) {
-    int n = strlen(str); // n é o tamanho da str
+    long int n = strlen(str); // n é o tamanho da str
     while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\0')) {
 				n--;
     }
 
 		//Novo espaço para alocar a nova string sem os caracteres indesejados
-		char *new_str = (char*) malloc((n+1) * sizeof(char));
+		char *new_str = (char*) malloc((n) * sizeof(char));
 		if (new_str == NULL) return NULL;
 
 		strncpy(new_str, str, n);
 		new_str[n] = '\0';
+
+		// libera a antiga string
+		free(str);
 
 		return new_str;
 }
