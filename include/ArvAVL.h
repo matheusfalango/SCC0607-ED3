@@ -33,7 +33,7 @@ NO* buscarNo(ARV* arv, int id);
 void insereNo(ARV* arv, int id, long long bOffset);
 void printInOrder(FILE* indice_bin_file, NO* no, int nivel);
 void removerNo(ARV* arv, int id);
-void liberarAVL(ARV* arv, NO* no);
+void liberarAVL(NO* no);
 
 void rotacEsq(ARV* arv,NO* no);
 void rotacDir(ARV* arv,NO* no);

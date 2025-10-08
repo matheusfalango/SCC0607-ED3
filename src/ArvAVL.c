@@ -318,14 +318,14 @@ void removerNo(ARV* arv, int id) {
     }
 }
 
-void liberarAVL(ARV* arv, NO* no) {
+void liberarAVL(NO* no) {
     /* Liberar todos os nós da árvore */
     if (no == NULL) {
         return;
     }
 
-    liberarAVL(arv, no->esq);
-    liberarAVL(arv, no->dir);
+    liberarAVL(no->esq);
+    liberarAVL(no->dir);
     free(no);
 }
 

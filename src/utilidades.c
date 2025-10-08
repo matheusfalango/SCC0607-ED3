@@ -95,24 +95,17 @@ char *novo_strtok(char *str, const char *delim, char **saveptr) {
     }
 
 		long int qtdDelimitadores = strspn(*saveptr, delim);
+		*saveptr += qtdDelimitadores;
+		if (**saveptr == '\0') {
+			return NULL;
+		}
 
-		// Pulando possíveis delimitadores no inicio da str
-		if (qtdDelimitadores <= 1) {
-				token = str;
-				*saveptr = strpbrk(token, delim);
-				
-				if (*saveptr != NULL) {
-						**saveptr = '\0';
-						(*saveptr)++;
-				}
-		} else if (qtdDelimitadores >= 2) {
-				token = str;
-				*saveptr = strpbrk(token, delim);
-
-				if (*saveptr != NULL) {
+		token = *saveptr;
+		*saveptr = strpbrk(token, delim);
+		
+		if (*saveptr != NULL) {
 				**saveptr = '\0';
 				(*saveptr)++;
-				}
 		}
 
 		return token;
@@ -122,7 +115,7 @@ char *novo_strtok(char *str, const char *delim, char **saveptr) {
 // Função auxiliar para remover caracteres especiais do final de uma string
 char *trim(char *str) {
     long int n = strlen(str); // n é o tamanho da str
-    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\0')) {
+    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
 				n--;
     }
 
@@ -132,9 +125,6 @@ char *trim(char *str) {
 
 		strncpy(new_str, str, n);
 		new_str[n] = '\0';
-
-		// libera a antiga string
-		free(str);
 
 		return new_str;
 }

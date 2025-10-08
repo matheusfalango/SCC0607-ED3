@@ -99,7 +99,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         // nomePessoa
         char nomePessoa_buffer[256];
         token = novo_strtok(rest, ",", &rest);
-        if (token != NULL) {
+        if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomePessoa_buffer, token);
             record.nomePessoa = trim(nomePessoa_buffer);
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
@@ -115,7 +115,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         // nomeUsuario
         char nomeUsuario_buffer[256];
         token = novo_strtok(rest, ",", &rest);
-        if (token != NULL) {
+        if (token != NULL && strcmp(token, "") != 0) {
             strcpy(nomeUsuario_buffer, token);
             record.nomeUsuario = trim(nomeUsuario_buffer);
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
@@ -139,9 +139,9 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomePessoa != NULL) fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, "") != 0) fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
         fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomeUsuario != NULL) fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, "") != 0) fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
 
         // Atualizar cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
@@ -181,7 +181,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     binarioNaTela(arquivoSaidaBin);
     binarioNaTela(arquivoIndicePrimarioBin);
 
-    liberarAVL(arvoreIndice, arvoreIndice->raiz);
+    liberarAVL(arvoreIndice->raiz);
     free(arvoreIndice);
 }
 
