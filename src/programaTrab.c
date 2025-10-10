@@ -38,20 +38,20 @@ void criarArquivoIndicePrimario(char *nomeArquivoIndice) {
 void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoIndicePrimarioBin) {
     FILE *csv_file = fopen(arquivoEntradaCSV, "r");
     if (csv_file == NULL) {
-        printf("Falha no processamento do arquivo: Não foi possível abrir o CSV de entrada.\n");
+        printf("Falha no processamento do arquivo.\n");
         return;
     }
 
     FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "wb");
     if (pessoa_bin_file == NULL) {
-        printf("Falha no processamento do arquivo: Não foi possível criar o arquivo binário de pessoas.\n");
+        printf("Falha no processamento do arquivo.\n");
         fclose(csv_file);
         return;
     }
 
     FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "r+b"); // r+b para ler e escrever
     if (indice_bin_file == NULL) {
-        printf("Falha no processamento do arquivo: Não foi possível abrir/modificar o arquivo de índice primário.\n");
+        printf("Falha no processamento do arquivo.\n");
         fclose(csv_file);
         fclose(pessoa_bin_file);
         return;
@@ -110,7 +110,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
 
         // idadePessoa
         token = novo_strtok(rest, ",", &rest);
-        record.idadePessoa = (token != NULL) ? atoi(token) : -1;
+        record.idadePessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
 
         // nomeUsuario
         char nomeUsuario_buffer[256];
@@ -161,12 +161,13 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
     // Atualizar cabeçalho final do arquivo pessoa.bin
+    fseek(pessoa_bin_file, 0, SEEK_END);
+    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
     fseek(pessoa_bin_file, 0, SEEK_SET);
     pessoa_header.status = '1'; // Consistente
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
-    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
     fwrite(&pessoa_header.proxByteOffset, sizeof(long long), 1, pessoa_bin_file);
 
     // Atualizar cabeçalho final do arquivo de índice
@@ -212,8 +213,8 @@ void listarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin) {
     }
 
     long long atual_byte_offset = -1;
-    // Pular os 11 bytes de lixo do cabeçalho do índice
-    fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+    // Pular apenas o status (1 byte) - os registros começam logo após
+    fseek(indice_bin_file, 1, SEEK_SET);
 
     IndexRecord current_index_record;
     while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
@@ -225,6 +226,8 @@ void listarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin) {
             fseek(pessoa_bin_file, atual_byte_offset, SEEK_SET);
 
             PessoaRecord record;
+            record.nomePessoa = NULL;
+            record.nomeUsuario = NULL;
             fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
 
             if (record.removido == NAO_REMOVIDO_CHAR ) {
@@ -234,14 +237,16 @@ void listarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin) {
                 
                 fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
                 if (record.tamanhoNomePessoa > 0) {
-                    record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa);
+                    record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
                     fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+                    record.nomePessoa[record.tamanhoNomePessoa] = '\0';
                 }   // Leitura somente se existir o nome da pessoa
 
                 fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
                 if (record.tamanhoNomeUsuario > 0) {
-                    record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario);
+                    record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
                     fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+                    record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
                 }   // Leitura somente se existir o nome de usuario
                 
                 // Print na tela
@@ -282,21 +287,205 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         return;
     }
 
-    FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "rb");
-    if (indice_bin_file == NULL) {
+    // Verificar consistência do arquivo
+    PessoaHeader pessoa_header;
+    fread(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
+    if (pessoa_header.status == '0') {
         printf("Falha no processamento do arquivo.\n");
         fclose(pessoa_bin_file);
         return;
     }
 
     while (qtdBusca > 0) {
+        char linha[256];
+        fgets(linha, sizeof(linha), stdin);
+        linha[strcspn(linha, "\n")] = '\0';
 
-        // implementação para ler campo e valor do campo
-        // depois disso, faz a busca no arquivo de dados
-        // id ou idade ou nome ou usuario
+        char *token = strtok(linha, " ");
+        int numBusca = atoi(token);
+        
+        token = strtok(NULL, " ");
+        if (token == NULL) {
+            qtdBusca--;
+            continue;
+        }
+
+        char *campo_valor = token;
+        char *igual = strchr(campo_valor, '=');
+        if (igual == NULL) {
+            qtdBusca--;
+            continue;
+        }
+
+        *igual = '\0';
+        char *campo = campo_valor;
+        char *valor = igual + 1;
+
+        // Remover aspas se existirem
+        if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {
+            valor[strlen(valor)-1] = '\0';
+            valor++;
+        }
+
+        int encontrado = 0;
+
+        if (strcmp(campo, "idPessoa") == 0) {
+            int idProcurado = atoi(valor);
+            // Buscar por ID usando índice
+            FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "rb");
+            if (indice_bin_file != NULL) {
+                IndexHeader index_header;
+                fread(&index_header.status, sizeof(char), 1, indice_bin_file);
+                if (index_header.status == '1') {
+                    fseek(indice_bin_file, 1, SEEK_SET);
+                    
+                    IndexRecord current_index_record;
+                    while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
+                        fread(&current_index_record.byteOffset, sizeof(long long), 1, indice_bin_file);
+                        
+                        if (current_index_record.idPessoa == idProcurado) {
+                            fseek(pessoa_bin_file, current_index_record.byteOffset, SEEK_SET);
+                            
+                            PessoaRecord record;
+                            record.nomePessoa = NULL;
+                            record.nomeUsuario = NULL;
+                            fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
+                            
+                            if (record.removido == NAO_REMOVIDO_CHAR) {
+                                fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+                                fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
+                                fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
+                                
+                                fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+                                if (record.tamanhoNomePessoa > 0) {
+                                    record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
+                                    fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+                                    record.nomePessoa[record.tamanhoNomePessoa] = '\0';
+                                }
+                                
+                                fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+                                if (record.tamanhoNomeUsuario > 0) {
+                                    record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
+                                    fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+                                    record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
+                                }
+                                
+                                printf("Dados da pessoa de codigo %d\n", record.idPessoa);
+                                if (record.tamanhoNomePessoa > 0) {
+                                    printf("Nome: %s\n", record.nomePessoa);
+                                } else {
+                                    printf("Nome: -\n");
+                                }
+                                if (record.idadePessoa != -1) {
+                                    printf("Idade: %d\n", record.idadePessoa);
+                                } else {
+                                    printf("Idade: -\n");
+                                }
+                                if (record.tamanhoNomeUsuario > 0) {
+                                    printf("Usuario: %s\n", record.nomeUsuario);
+                                } else {
+                                    printf("Usuario: -\n");
+                                }
+                                printf("\n");
+                                encontrado = 1;
+                                
+                                if (record.nomePessoa != NULL) free(record.nomePessoa);
+                                if (record.nomeUsuario != NULL) free(record.nomeUsuario);
+                            }
+                            break;
+                        }
+                    }
+                }
+                fclose(indice_bin_file);
+            }
+        } else {
+            // Busca sequencial para outros campos
+            fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
+            
+            while (!feof(pessoa_bin_file)) {
+                long long pos_atual = ftell(pessoa_bin_file);
+                
+                PessoaRecord record;
+                record.nomePessoa = NULL;
+                record.nomeUsuario = NULL;
+                
+                if (fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
+                
+                if (record.removido == NAO_REMOVIDO_CHAR) {
+                    fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+                    fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
+                    fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
+                    
+                    fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+                    if (record.tamanhoNomePessoa > 0) {
+                        record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
+                        fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+                        record.nomePessoa[record.tamanhoNomePessoa] = '\0';
+                    }
+                    
+                    fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+                    if (record.tamanhoNomeUsuario > 0) {
+                        record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
+                        fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+                        record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
+                    }
+                    
+                    int match = 0;
+                    if (strcmp(campo, "idadePessoa") == 0) {
+                        int idadeProcurada = atoi(valor);
+                        if (record.idadePessoa == idadeProcurada) {
+                            match = 1;
+                        }
+                    } else if (strcmp(campo, "nomePessoa") == 0) {
+                        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, valor) == 0) {
+                            match = 1;
+                        }
+                    } else if (strcmp(campo, "nomeUsuario") == 0) {
+                        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, valor) == 0) {
+                            match = 1;
+                        }
+                    }
+                    
+                    if (match) {
+                        printf("Dados da pessoa de codigo %d\n", record.idPessoa);
+                        if (record.tamanhoNomePessoa > 0) {
+                            printf("Nome: %s\n", record.nomePessoa);
+                        } else {
+                            printf("Nome: -\n");
+                        }
+                        if (record.idadePessoa != -1) {
+                            printf("Idade: %d\n", record.idadePessoa);
+                        } else {
+                            printf("Idade: -\n");
+                        }
+                        if (record.tamanhoNomeUsuario > 0) {
+                            printf("Usuario: %s\n", record.nomeUsuario);
+                        } else {
+                            printf("Usuario: -\n");
+                        }
+                        printf("\n");
+                        encontrado = 1;
+                    }
+                    
+                    if (record.nomePessoa != NULL) free(record.nomePessoa);
+                    if (record.nomeUsuario != NULL) free(record.nomeUsuario);
+                } else {
+                    // Registro removido, pular
+                    int tamanhoRegistro;
+                    fread(&tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+                    fseek(pessoa_bin_file, pos_atual + tamanhoRegistro, SEEK_SET);
+                }
+            }
+        }
+        
+        if (!encontrado) {
+            printf("Registro inexistente.\n");
+        }
 
         qtdBusca--;
     }
+    
+    fclose(pessoa_bin_file);
 }
 
 

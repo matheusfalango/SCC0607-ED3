@@ -94,12 +94,7 @@ char *novo_strtok(char *str, const char *delim, char **saveptr) {
         return NULL;
     }
 
-		long int qtdDelimitadores = strspn(*saveptr, delim);
-		*saveptr += qtdDelimitadores;
-		if (**saveptr == '\0') {
-			return NULL;
-		}
-
+		// Não pular delimitadores consecutivos para preservar campos vazios
 		token = *saveptr;
 		*saveptr = strpbrk(token, delim);
 		
@@ -120,7 +115,8 @@ char *trim(char *str) {
     }
 
 		//Novo espaço para alocar a nova string sem os caracteres indesejados
-		char *new_str = (char*) malloc((n) * sizeof(char));
+		// Alocar n+1 bytes para incluir o terminador nulo
+		char *new_str = (char*) malloc((n + 1) * sizeof(char));
 		if (new_str == NULL) return NULL;
 
 		strncpy(new_str, str, n);
