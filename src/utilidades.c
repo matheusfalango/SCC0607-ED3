@@ -6,11 +6,14 @@ Implementação das funções implementadas no trabalho para facilitar
 alguns processos, a exemplo da manipulação de string
 */
 
+#include "programaTrab.h"
 #include "utilidades.h"
 #include "ArvAVL.h"
 
 
-// Funções disponibilizadas para o projeto
+/* 
+Funções disponibilizadas para o projeto
+*/
 /*
 Função para imprimir dados salvos no arquivo em binário
 (util para comparar saida no run codes)
@@ -66,19 +69,27 @@ void scan_quote_string(char *str) {
 }
 
 
-// Funções desenvolvidas para o projeto
-void atualizaAVL(ARV* arv, int id, long long bOffset) {
+/*
+Funções desenvolvidas para o projeto
+*/
+void atualizaAVL(ARV* arv, int id, long long int bOffset) {
 		insereNo(arv, id, bOffset);
 }
 
 
 void printCrescIndice(NO* raiz, FILE* indice_bin_file) {
-		if (raiz != NULL) {
-				printCrescIndice(raiz->esq, indice_bin_file);
-				fwrite(&raiz->id, sizeof(int), 1, indice_bin_file);
-				fwrite(&raiz->bOffset, sizeof(long long), 1, indice_bin_file);
-				printCrescIndice(raiz->dir, indice_bin_file);
-		}
+		if (raiz == NULL) return;
+
+		// Percorre os nós da esquerda
+		printCrescIndice(raiz->esq, indice_bin_file);
+
+		// Escreve o nó atual
+		fwrite(&raiz->id, sizeof(int), 1, indice_bin_file);
+		fwrite(&raiz->bOffset, sizeof(long long int), 1, indice_bin_file);
+
+		// Percorre os nós da direita
+		printCrescIndice(raiz->dir, indice_bin_file);
+		
 }
 
 

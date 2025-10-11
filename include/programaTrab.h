@@ -21,7 +21,7 @@ typedef struct {
     char status; // '0' inconsistente, '1' consistente
     int quantidadePessoas;
     int quantidadeRemovidos;
-    long long proxByteOffset;
+    long long int proxByteOffset;
 } PessoaHeader;
 
 typedef struct {
@@ -45,7 +45,7 @@ typedef struct {
 
 typedef struct {
     int idPessoa;
-    long long byteOffset;
+    long long int byteOffset;
 } IndexRecord;
 
 // Funcionalidade 1: Criação de Arquivo de Índice Primário
@@ -55,14 +55,13 @@ void criarArquivoIndicePrimario(char *nomeArquivoIndice);
 void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoIndicePrimarioBin);
 
 // Funcionalidade 3: Listar todo o registro de dados
-void listarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin);
+void listarRegistros(char *arquivoSaidaBin);
 
 // Funcionalidade 4: Busca por campo de referencia
 void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
 
-// Funcionalidades a mais
-void buscarPessoaPorIndice(char *arquivoSaidaBin, int idPessoa);
-void buscarPessoaPorNome(char *arquivoSaidaBin, char *nomePessoa);
+// Função complementar: printar registros na tela
+void printNaTela(PessoaRecord record);
 
 #endif
 

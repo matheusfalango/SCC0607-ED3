@@ -15,7 +15,7 @@ typedef struct no {
     struct no* ant;
     int altura;
     int id;
-    long long bOffset;
+    long long int bOffset;
 } NO;
 
 typedef struct arv {
@@ -30,8 +30,7 @@ ARV* criarAVL();
 NO* criarNo();
 NO* buscarNo(ARV* arv, int id);
 
-void insereNo(ARV* arv, int id, long long bOffset);
-void printInOrder(FILE* indice_bin_file, NO* no, int nivel);
+void insereNo(ARV* arv, int id, long long int bOffset);
 void removerNo(ARV* arv, int id);
 void liberarAVL(NO* no);
 

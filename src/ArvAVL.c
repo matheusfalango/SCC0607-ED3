@@ -141,7 +141,7 @@ void rotac(ARV* arv, NO* raiz) {
 }
 
 
-void insereNo(ARV* arv,int id, long long bOffset) {
+void insereNo(ARV* arv,int id, long long int bOffset) {
     NO* no = criarNo();
     no->id = id;
     no->bOffset = bOffset;
@@ -179,19 +179,7 @@ void insereNo(ARV* arv,int id, long long bOffset) {
         arv->nosTaman++;
 
     } else {
-        printf("Nó já foi inserido anteriormente.\n");
-    }
-}
-
-
-void printInOrder(FILE* indice_bin_file, NO* no, int nivel) {
-    /* Imprime a árvore em ordem crescente no arquivo binario de índice */
-    fseek(indice_bin_file, 0, SEEK_END);
-    if (no != NULL) {
-        printInOrder(indice_bin_file, no->esq, nivel + 1);
-        fwrite(&no->id, sizeof(int), 1, indice_bin_file);
-        fwrite(&no->bOffset, sizeof(long long), 1, indice_bin_file);
-        printInOrder(indice_bin_file, no->dir, nivel + 1);
+        free(no);   //já foi inserido
     }
 }
 
