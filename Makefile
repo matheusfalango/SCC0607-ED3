@@ -48,7 +48,8 @@ $(OBJ_DIR):
 clean:
 	if exist $(OBJ_DIR)\*.o del -f $(OBJ_DIR)\*.o
 	if exist $(TARGET) del -f $(TARGET)
-	if exist *.bin del -f -q *.bin
+	if exist pessoa.bin del -f -q pessoa.bin
+	if exist indexaPessoa.bin del -f -q indexaPessoa.bin
 
 # Cria um arquivo .zip para enviar o trabalho
 zip:

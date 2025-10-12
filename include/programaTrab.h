@@ -21,16 +21,16 @@ typedef struct {
     char status; // '0' inconsistente, '1' consistente
     int quantidadePessoas;
     int quantidadeRemovidos;
-    long long int proxByteOffset;
+    long int proxByteOffset;
 } PessoaHeader;
 
 typedef struct {
     char removido; // '0' não removido, '1' removido
     int tamanhoRegistro;
     int idPessoa;
+    int idadePessoa;
     int tamanhoNomePessoa;
     char *nomePessoa;
-    int idadePessoa;
     int tamanhoNomeUsuario;
     char *nomeUsuario;
 } PessoaRecord;
@@ -45,7 +45,7 @@ typedef struct {
 
 typedef struct {
     int idPessoa;
-    long long int byteOffset;
+    long int byteOffset;
 } IndexRecord;
 
 // Funcionalidade 1: Criação de Arquivo de Índice Primário

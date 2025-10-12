@@ -141,7 +141,7 @@ void rotac(ARV* arv, NO* raiz) {
 }
 
 
-void insereNo(ARV* arv,int id, long long int bOffset) {
+void insereNo(ARV* arv,int id, long int bOffset) {
     NO* no = criarNo();
     no->id = id;
     no->bOffset = bOffset;

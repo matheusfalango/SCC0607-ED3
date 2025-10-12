@@ -72,7 +72,7 @@ void scan_quote_string(char *str) {
 /*
 Funções desenvolvidas para o projeto
 */
-void atualizaAVL(ARV* arv, int id, long long int bOffset) {
+void atualizaAVL(ARV* arv, int id, long int bOffset) {
 		insereNo(arv, id, bOffset);
 }
 
@@ -85,7 +85,7 @@ void printCrescIndice(NO* raiz, FILE* indice_bin_file) {
 
 		// Escreve o nó atual
 		fwrite(&raiz->id, sizeof(int), 1, indice_bin_file);
-		fwrite(&raiz->bOffset, sizeof(long long int), 1, indice_bin_file);
+		fwrite(&raiz->bOffset, sizeof(long int), 1, indice_bin_file);
 
 		// Percorre os nós da direita
 		printCrescIndice(raiz->dir, indice_bin_file);
@@ -120,14 +120,15 @@ char *novo_strtok(char *str, const char *delim, char **saveptr) {
 
 // Função auxiliar para remover caracteres especiais do final de uma string
 char *trim(char *str) {
-    long int n = strlen(str); // n é o tamanho da str
+
+		int n = strlen(str); // n é o tamanho da str
     while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
 				n--;
     }
 
-		//Novo espaço para alocar a nova string sem os caracteres indesejados
+		// Novo espaço para alocar a nova string sem os caracteres indesejados
 		// Alocar n+1 bytes para incluir o terminador nulo
-		char *new_str = (char*) malloc((n + 1) * sizeof(char));
+		char *new_str = (char*) malloc((n+1) * sizeof(char));
 		if (new_str == NULL) return NULL;
 
 		strncpy(new_str, str, n);
@@ -135,3 +136,4 @@ char *trim(char *str) {
 
 		return new_str;
 }
+

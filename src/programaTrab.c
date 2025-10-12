@@ -67,7 +67,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.proxByteOffset, sizeof(long long int), 1, pessoa_bin_file);
+    fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
 
     // Atualizar status do cabeçalho do arquivo de índice para '0'
     IndexHeader index_header;
@@ -99,7 +99,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         
         // nomePessoa
         char nomePessoa_buffer[256];
-        token = novo_strtok(rest, ",", &rest);
+        token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0') {
             strcpy(nomePessoa_buffer, token);
             record.nomePessoa = trim(nomePessoa_buffer);
@@ -110,12 +110,12 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         }
 
         // idadePessoa
-        token = novo_strtok(rest, ",", &rest);
+        token = novo_strtok(NULL, ",", &rest);
         record.idadePessoa = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
 
         // nomeUsuario
         char nomeUsuario_buffer[256];
-        token = novo_strtok(rest, ",", &rest);
+        token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0') {
             strcpy(nomeUsuario_buffer, token);
             record.nomeUsuario = trim(nomeUsuario_buffer);
@@ -128,16 +128,14 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         // logo somente é guardado o tamanho da string
 
         // Calcular tamanho do registro
-        // removido (1) + tamanhoRegistro (4) + idPessoa (4) + idadePessoa (4) + tamanhoNomePessoa (4) + tamanhoNomeUsuario (4)
-        record.tamanhoRegistro = 1 + 4 + 4 + 4 + 4 + 4;
+        // idPessoa (4) + idadePessoa (4) + tamanhoNomePessoa (4) + tamanhoNomeUsuario (4)
+        record.tamanhoRegistro = 4*sizeof(int);
         if (record.nomePessoa != NULL && record.tamanhoNomePessoa != 0) record.tamanhoRegistro += record.tamanhoNomePessoa;
         if (record.nomeUsuario != NULL && record.tamanhoNomeUsuario != 0) record.tamanhoRegistro += record.tamanhoNomeUsuario;
 
         // Escrever registro no arquivo pessoa.bin
-        long long int atual_byte_offset = ftell(pessoa_bin_file);
-        //if(atual_byte_offset == 0) fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
-        //atual_byte_offset += record.tamanhoRegistro;
-        fseek(pessoa_bin_file, 0, SEEK_END);
+        long int atual_byte_offset = ftell(pessoa_bin_file);
+        //fseek(pessoa_bin_file, 0, SEEK_END);
         fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
         fwrite(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
@@ -149,7 +147,6 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
 
         // Atualizar cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
-        // pessoa_header.proxByteOffset += record.tamanhoRegistro; // Isso será feito no final
 
         // Inserir na arvore AVL para o índice
         IndexRecord index_record;
@@ -162,20 +159,18 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     }
 
     // Escrever a árvore AVL no arquivo de índice
-    fseek(indice_bin_file, 0, SEEK_END);
+    //fseek(indice_bin_file, 0, SEEK_END);
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
     // Atualizar cabeçalho final do arquivo pessoa.bin
-    fseek(pessoa_bin_file, 0, SEEK_END);
+    //fseek(pessoa_bin_file, 0, SEEK_END);
     pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
-    //pessoa_header.proxByteOffset = atual_byte_offset;
     fseek(pessoa_bin_file, 0, SEEK_SET);
     pessoa_header.status = '1'; // Consistente
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
-    //pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
-    fwrite(&pessoa_header.proxByteOffset, sizeof(long long int), 1, pessoa_bin_file);
+    fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
 
     // Atualizar cabeçalho final do arquivo de índice
     fseek(indice_bin_file, 0, SEEK_SET);
@@ -203,7 +198,7 @@ void listarRegistros(char *arquivoSaidaBin) {
     }
 
     fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
-    long long int atual_byte_offset;
+    long int atual_byte_offset;
 
     //Busca sequencial dos registros
     while(1) {
@@ -237,7 +232,7 @@ void listarRegistros(char *arquivoSaidaBin) {
             // Print na tela
             printNaTela(record);
             printf("\n");
-            fseek(pessoa_bin_file, atual_byte_offset + record.tamanhoRegistro, SEEK_SET);
+            
         } else {
             // Registro removido, pular
             int tamanhoRegistro;
@@ -331,7 +326,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                 
                 IndexRecord current_index_record;
                 while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
-                    fread(&current_index_record.byteOffset, sizeof(long long int), 1, indice_bin_file);
+                    fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
                     
                     if (current_index_record.idPessoa == idProcurado) {
                         fseek(pessoa_bin_file, current_index_record.byteOffset, SEEK_SET);
@@ -378,7 +373,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
             fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
             
             while (1) {
-                long long int atual_byte_offset = ftell(pessoa_bin_file);
+                long int atual_byte_offset = ftell(pessoa_bin_file);
                 
                 PessoaRecord record;
                 record.nomePessoa = NULL;
