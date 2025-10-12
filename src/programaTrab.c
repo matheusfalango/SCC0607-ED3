@@ -5,10 +5,15 @@
 #include "utilidades.h"
 #include "ArvAVL.h"
 
+// ===============================================================================
+// FUNCIONALIDADES PRINCIPAIS
+// ===============================================================================
 
-// Programa principal
-
-// Implementação da Funcionalidade 1: Criação de Arquivo de Índice Primário
+/*
+Implementação da Funcionalidade 1: Criação de Arquivo de Índice Primário
+Cria um arquivo binário de índice com um cabeçalho inicializado.
+@param nomeArquivoIndice: Nome do arquivo de índice a ser criado.
+*/
 void criarArquivoIndicePrimario(char *nomeArquivoIndice) {
     FILE *indice_bin_file = fopen(nomeArquivoIndice, "wb");
     if (indice_bin_file == NULL) {
@@ -17,26 +22,36 @@ void criarArquivoIndicePrimario(char *nomeArquivoIndice) {
     }
 
     IndexHeader header;
-    header.status = '0'; // Inconsistente durante a escrita
+    header.status = '0'; // Status '0': Inconsistente (em escrita)
 
     fseek(indice_bin_file, 0 ,SEEK_SET);
     fwrite(&header.status, sizeof(char), 1, indice_bin_file);
-    // Preencher os 11 bytes restantes com lixo '$'
+    
+    // Preenche os 11 bytes restantes do cabeçalho com lixo '$'
     for (int i = 0; i < 11; i++) {
         fputc(LIXO_CHAR, indice_bin_file);
     }
 
-    header.status = '1'; // Consistente após a escrita
+    header.status = '1'; // Status '1': Consistente (escrita finalizada)
     fseek(indice_bin_file, 0, SEEK_SET);
     fwrite(&header.status, sizeof(char), 1, indice_bin_file);
 
     fclose(indice_bin_file);
-    binarioNaTela(nomeArquivoIndice);
+    binarioNaTela(nomeArquivoIndice); // Função de debug
 }
 
 
-// Implementação da Funcionalidade 2: Leitura de CSV e Geração de Arquivo de Dados e Índice
+/*
+Implementação da Funcionalidade 2: Leitura de CSV e Geração de Arquivo de Dados e Índice
+Lê um arquivo CSV, gera um arquivo binário de dados e um arquivo binário de índice primário 
+(utilizando uma Árvore AVL em memória).
+@param arquivoEntradaCSV: Nome do arquivo CSV de entrada.
+@param arquivoSaidaBin: Nome do arquivo binário de dados (pessoa.bin).
+@param arquivoIndicePrimarioBin: Nome do arquivo binário de índice (indexaPessoa.bin).
+*/
 void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoIndicePrimarioBin) {
+    
+    // Abertura dos arquivos
     FILE *csv_file = fopen(arquivoEntradaCSV, "r");
     if (csv_file == NULL) {
         printf("Falha no processamento do arquivo.\n");
@@ -58,32 +73,35 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         return;
     }
 
-    // Inicializar cabeçalho do arquivo pessoa.bin - registro de dados
+    // 1. Inicializar cabeçalho do arquivo pessoa.bin (dados)
     PessoaHeader pessoa_header;
-    pessoa_header.status = '0'; // Inconsistente
+    pessoa_header.status = '0'; 
     pessoa_header.quantidadePessoas = 0;
     pessoa_header.quantidadeRemovidos = 0;
-    pessoa_header.proxByteOffset = PESSOA_HEADER_SIZE; // Começa após o cabeçalho
+    pessoa_header.proxByteOffset = PESSOA_HEADER_SIZE; 
+    
+    // Escreve cabeçalho inicial no arquivo de dados
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
 
-    // Atualizar status do cabeçalho do arquivo de índice para '0'
+    // 2. Atualizar status do cabeçalho do arquivo de índice para '0' (inconsistente)
     IndexHeader index_header;
     fseek(indice_bin_file, 0, SEEK_SET);
-    fread(&index_header.status, sizeof(char), 1, indice_bin_file);
+    fread(&index_header.status, sizeof(char), 1, indice_bin_file); // Lê o status atual
     index_header.status = '0';
     fseek(indice_bin_file, 0, SEEK_SET);
     fwrite(&index_header.status, sizeof(char), 1, indice_bin_file);
 
-    // Criar árvore AVL para o índice
+    // 3. Criar árvore AVL para o índice em memória
     ARV* arvoreIndice = criarAVL();
 
     char line[1024];
     // Ignorar a primeira linha (cabeçalho do CSV)
     fgets(line, sizeof(line), csv_file);
 
+    // 4. Processamento de cada linha do CSV
     while (fgets(line, sizeof(line), csv_file) != NULL) {
         PessoaRecord record;
         record.removido = NAO_REMOVIDO_CHAR;
@@ -93,78 +111,86 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         char *token;
         char *rest = line;
 
-        // idPessoa
+        // Extrai campos usando novo_strtok para preservar campos vazios
+        
+        // idPessoa (int)
         token = novo_strtok(rest, ",", &rest);
         record.idPessoa = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
         
-        // nomePessoa
+        // nomePessoa (string variável)
         char nomePessoa_buffer[256];
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
             strcpy(nomePessoa_buffer, token);
-            record.nomePessoa = trim(nomePessoa_buffer);
+            record.nomePessoa = trim(nomePessoa_buffer); // Remove espaços/quebras de linha
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
         } else {
             record.nomePessoa = NULL;
             record.tamanhoNomePessoa = 0;
         }
 
-        // idadePessoa
+        // idadePessoa (int)
         token = novo_strtok(NULL, ",", &rest);
         record.idadePessoa = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
 
-        // nomeUsuario
+        // nomeUsuario (string variável)
         char nomeUsuario_buffer[256];
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
             strcpy(nomeUsuario_buffer, token);
-            record.nomeUsuario = trim(nomeUsuario_buffer);
+            record.nomeUsuario = trim(nomeUsuario_buffer); // Remove espaços/quebras de linha
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
         } else {
             record.nomeUsuario = NULL;
             record.tamanhoNomeUsuario = 0;
         }
-        // Ao colocar nulo no ponteiro da string, nao aloca no disco a string
-        // logo somente é guardado o tamanho da string
 
-        // Calcular tamanho do registro
-        // idPessoa (4) + idadePessoa (4) + tamanhoNomePessoa (4) + tamanhoNomeUsuario (4)
+        // Calcular tamanho do registro (fixo + variável)
+        // 4 * sizeof(int) = idPessoa + idadePessoa + tamanhoNomePessoa + tamanhoNomeUsuario
         record.tamanhoRegistro = 4*sizeof(int);
         if (record.nomePessoa != NULL && record.tamanhoNomePessoa != 0) record.tamanhoRegistro += record.tamanhoNomePessoa;
         if (record.nomeUsuario != NULL && record.tamanhoNomeUsuario != 0) record.tamanhoRegistro += record.tamanhoNomeUsuario;
 
-        // Escrever registro no arquivo pessoa.bin
-        long int atual_byte_offset = ftell(pessoa_bin_file);
+        // 5. Escrever registro no arquivo pessoa.bin
+        long int atual_byte_offset = ftell(pessoa_bin_file); // Byte offset de início do registro
         fseek(pessoa_bin_file, 0, SEEK_END);
+        
+        // Cabeçalho do registro (removido + tamanhoRegistro)
         fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
         fwrite(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+        
+        // Campos fixos
         fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
+        
+        // Campos variáveis (tamanho + dado)
         fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
         if (record.nomePessoa != NULL && record.nomePessoa[0] != '\0') fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+        
         fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
         if (record.nomeUsuario != NULL && record.nomeUsuario[0] != '\0') fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
 
-        // Atualizar cabeçalho do arquivo pessoa.bin
+        // 6. Atualizar contagem do cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
 
-        // Inserir na arvore AVL para o índice
+        // 7. Inserir na arvore AVL para o índice
         IndexRecord index_record;
         index_record.idPessoa = record.idPessoa;
         index_record.byteOffset = atual_byte_offset;
         atualizaAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
 
+        // 8. Liberar memória alocada pelo trim
         if (record.nomePessoa != NULL) free(record.nomePessoa);
         if (record.nomeUsuario != NULL) free(record.nomeUsuario);
     }
 
-    // Escrever a árvore AVL no arquivo de índice
-    fseek(indice_bin_file, 0, SEEK_END);
+    // 9. Escrever a árvore AVL no arquivo de índice (em ordem crescente)
+    fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
-    // Atualizar cabeçalho final do arquivo pessoa.bin
+    // 10. Atualizar cabeçalho final do arquivo pessoa.bin (dados)
     fseek(pessoa_bin_file, 0, SEEK_END);
-    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
+    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Tamanho total do arquivo
     fseek(pessoa_bin_file, 0, SEEK_SET);
     pessoa_header.status = '1'; // Consistente
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
@@ -172,11 +198,12 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
 
-    // Atualizar cabeçalho final do arquivo de índice
+    // 11. Atualizar cabeçalho final do arquivo de índice
     fseek(indice_bin_file, 0, SEEK_SET);
     index_header.status = '1'; // Consistente
     fwrite(&index_header.status, sizeof(char), 1, indice_bin_file);
 
+    // 12. Fechar arquivos e liberar memória
     fclose(csv_file);
     fclose(pessoa_bin_file);
     fclose(indice_bin_file);
@@ -188,8 +215,12 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     free(arvoreIndice);
 }
 
-// SÓ DEVE PASSAR OA RQ DE DADOS, ENT N PRECISA DO INDICE
-// Implementação da Funcionalidade 3: Listar todos os registros
+/*
+Implementação da Funcionalidade 3: Listar todos os registros
+Realiza uma varredura sequencial no arquivo de dados e imprime na tela apenas
+os registros NÃO REMOVIDOS.
+@param arquivoSaidaBin: Nome do arquivo binário de dados (pessoa.bin).
+*/
 void listarRegistros(char *arquivoSaidaBin) {
     FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "rb");
     if (pessoa_bin_file == NULL) {
@@ -197,61 +228,72 @@ void listarRegistros(char *arquivoSaidaBin) {
         return;
     }
 
+    // Pula o cabeçalho
     fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
     long int atual_byte_offset;
 
-    //Busca sequencial dos registros
+    // Busca sequencial dos registros
     while(1) {
-        //Atualizar byte offset
         atual_byte_offset = ftell(pessoa_bin_file);
 
         PessoaRecord record;
         record.nomePessoa = NULL;
         record.nomeUsuario = NULL;
+        
+        // Tenta ler o campo 'removido'
         if(fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
 
         if (record.removido == NAO_REMOVIDO_CHAR ) {
+            // Registro não removido: lê e processa
             fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
             fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
             fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
             
+            // Leitura de nomePessoa (tamanho + dado)
             fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
             if (record.tamanhoNomePessoa > 0) {
                 record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
                 fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
                 record.nomePessoa[record.tamanhoNomePessoa] = '\0';
-            }   // Leitura somente se existir o nome da pessoa
+            }
 
+            // Leitura de nomeUsuario (tamanho + dado)
             fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
             if (record.tamanhoNomeUsuario > 0) {
                 record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
                 fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
                 record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
-            }   // Leitura somente se existir o nome de usuario
+            }
             
             // Print na tela
             printNaTela(record);
             printf("\n");
             
         } else {
-            // Registro removido, pular
+            // Registro removido ('1'): pula o restante do registro
             int tamanhoRegistro;
             fread(&tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-            fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro, SEEK_SET);
+            // Avança o ponteiro de arquivo pelo tamanho total do registro (sem contar 'removido' e 'tamanhoRegistro')
+            fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro + sizeof(char) + sizeof(int), SEEK_SET);
         }
 
-        free(record.nomePessoa);
-        free(record.nomeUsuario);
+        // Libera a memória alocada para as strings do registro atual
+        if (record.nomePessoa != NULL) free(record.nomePessoa);
+        if (record.nomeUsuario != NULL) free(record.nomeUsuario);
     }
 
     fclose(pessoa_bin_file);
 }
 
 
-/*Implementação 4: Busca de uma quantidade de campos 
-seguindo o campo referência dado*/ 
-/*Implementação 4: Busca de uma quantidade de campos 
-seguindo o campo referência dado*/ 
+/*
+Implementação da Funcionalidade 4: Busca por campo de referência
+Realiza 'qtdBusca' buscas no arquivo de dados, utilizando o índice primário (AVL em memória)
+para buscas por 'idPessoa' e busca sequencial para outros campos.
+@param arquivoSaidaBin: Nome do arquivo binário de dados (pessoa.bin).
+@param arquivoIndicePrimarioBin: Nome do arquivo binário de índice (indexaPessoa.bin).
+@param qtdBusca: Número de buscas a serem realizadas.
+*/
 void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int qtdBusca) {
     FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "rb");
     if (pessoa_bin_file == NULL) {
@@ -259,6 +301,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         return;
     }
 
+    // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
     fseek(pessoa_bin_file, 0, SEEK_SET);
     fread(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
@@ -268,6 +311,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         return;
     }
 
+    // 2. Carrega o índice para a Árvore AVL em memória
     ARV* arvoreIndice = criarAVL();
     FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "rb");
 
@@ -276,10 +320,11 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         fseek(indice_bin_file, 0, SEEK_SET);
         fread(&index_header.status, sizeof(char), 1, indice_bin_file);
 
-        if (index_header.status == '1') {
+        if (index_header.status == '1') { // Índice consistente
             fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
 
             IndexRecord current_index_record;
+            // Lê cada registro de índice e insere na AVL
             while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
                 fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
                 atualizaAVL(arvoreIndice, current_index_record.idPessoa, current_index_record.byteOffset);
@@ -288,45 +333,39 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         fclose(indice_bin_file);
     }
 
+    // 3. Processa as buscas
     int numBusca = 1;
-
     while (numBusca <= qtdBusca) {
         char linha[256];
-
-        // Limpar buffer e ler linha
+        
+        // Lê a linha de comando de busca
         memset(linha, 0, sizeof(linha));
         if (fgets(linha, sizeof(linha), stdin) == NULL) break;
+        linha[strcspn(linha, "\r\n")] = '\0'; // Remove \n e \r
+        if (strlen(linha) == 0) continue; // Pula linhas vazias
 
-        // Remover \n e \r se existirem
-        linha[strcspn(linha, "\r\n")] = '\0';
-
-        // Pular linhas vazias
-        if (strlen(linha) == 0) continue;
-
-        // Dividir a linha em tokens
+        // Prepara a linha para tokenização (ex: "1 campo=valor")
         char linha_copia[256];
         strcpy(linha_copia, linha);
 
         char *token = strtok(linha_copia, " ");
+        if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        token = strtok(NULL, " "); // Pula o número da busca
         if (token == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
             continue;
         }
 
-        // Pular o número da busca
-        token = strtok(NULL, " ");
-        if (token == NULL) {
-            printf("Registro inexistente.\n\n");
-            numBusca++;
-            continue;
-        }
-
-        // Processar campo=valor
+        // Processa campo=valor
         char campo[50] = {0};
         char valor[200] = {0};
 
-        // Encontrar o '='
         char *igual_pos = strchr(token, '=');
         if (igual_pos == NULL) {
             printf("Registro inexistente.\n\n");
@@ -334,22 +373,22 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
             continue;
         }
 
-        // Copiar campo
+        // Extrai 'campo'
         int campo_len = igual_pos - token;
         strncpy(campo, token, campo_len);
         campo[campo_len] = '\0';
 
-        // Copiar valor (tudo após o '=')
+        // Extrai 'valor'
         strcpy(valor, igual_pos + 1);
 
-        // Se houver mais tokens após o campo=valor (para valores com espaços)
+        // Trata valores com espaços (se houver mais tokens)
         char *resto = strtok(NULL, "");
         if (resto != NULL && strlen(resto) > 0) {
             strcat(valor, " ");
             strcat(valor, resto);
         }
 
-        // Remover aspas se existirem
+        // Limpa o valor (remove aspas e espaços extras)
         char valor_final[200] = {0};
         if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {
             strncpy(valor_final, valor + 1, strlen(valor) - 2);
@@ -357,32 +396,29 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         } else {
             strcpy(valor_final, valor);
         }
-
-        // Remover espaços extras do início e fim
         char *p_inicio = valor_final;
         while (*p_inicio == ' ' || *p_inicio == '\t') p_inicio++;
-
         char *p_fim = valor_final + strlen(valor_final) - 1;
         while (p_fim > p_inicio && (*p_fim == ' ' || *p_fim == '\t')) {
             *p_fim = '\0';
             p_fim--;
         }
-
-        // Copiar valor limpo
         if (p_inicio != valor_final) {
             memmove(valor_final, p_inicio, strlen(p_inicio) + 1);
         }
 
         int encontrado = 0;
 
+        // 4. Executa a busca
         if (strcmp(campo, "idPessoa") == 0) {
+            // Busca indexada (AVL)
             int idProcurado = atoi(valor_final);
-
             NO* noEncontrado = buscarNo(arvoreIndice, idProcurado);
 
             if (noEncontrado != NULL) {
                 long int eByteOffset = noEncontrado->bOffset;
 
+                // Acessa o registro diretamente no arquivo de dados
                 fseek(pessoa_bin_file, eByteOffset, SEEK_SET);
 
                 PessoaRecord record;
@@ -392,6 +428,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                 fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
 
                 if (record.removido == NAO_REMOVIDO_CHAR) {
+                    // Lê o restante do registro
                     fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
@@ -419,7 +456,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                 }
             }
         } else {
-            // Busca sequencial para outros campos
+            // Busca sequencial para outros campos ('idadePessoa', 'nomePessoa', 'nomeUsuario')
             fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
 
             while (1) {
@@ -432,6 +469,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                 if (fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
 
                 if (record.removido == NAO_REMOVIDO_CHAR) {
+                    // Lê o registro
                     fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
@@ -450,10 +488,11 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                         record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
                     }
 
+                    // Compara o campo
                     int match = 0;
                     if (strcmp(campo, "idadePessoa") == 0) {
                         int idadeProcurada = atoi(valor_final);
-                        if (record.idadePessoa == idadeProcurada) {
+                        if (record.idadePessoa != -1 && record.idadePessoa == idadeProcurada) {
                             match = 1;
                         }
                     } else if (strcmp(campo, "nomePessoa") == 0) {
@@ -474,15 +513,17 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
                     if (record.nomePessoa != NULL) free(record.nomePessoa);
                     if (record.nomeUsuario != NULL) free(record.nomeUsuario);
+
                 } else {
-                    // Registro removido, pular
+                    // Registro removido, pula
                     int tamanhoRegistro;
                     fread(&tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-                    fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro, SEEK_SET);
+                    // Avança o ponteiro de arquivo
+                    fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro + sizeof(char) + sizeof(int), SEEK_SET);
                 }
             }
 
-            // Limpar erro de EOF
+            // Limpa erro de EOF após a busca
             clearerr(pessoa_bin_file);
         }
 
@@ -493,49 +534,38 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         numBusca++;
     }
 
+    // 5. Libera memória
     liberarAVL(arvoreIndice->raiz);
     free(arvoreIndice);
     fclose(pessoa_bin_file);
 }
 
 
-/*Função complementar para printar registros na tela*/
-void printNaTela(PessoaRecord record) {
-		printf("Dados da pessoa de codigo %d\n", record.idPessoa);
-		if (record.tamanhoNomePessoa > 0) {
-				printf("Nome: %s\n", record.nomePessoa);
-		} else {
-				printf("Nome: -\n");
-		}
-		if (record.idadePessoa != -1) {
-				printf("Idade: %d\n", record.idadePessoa);
-		} else {
-				printf("Idade: -\n");
-		}
-		if (record.tamanhoNomeUsuario > 0) {
-				printf("Usuario: %s\n", record.nomeUsuario);
-		} else {
-				printf("Usuario: -\n");
-		}
-}
+// ===============================================================================
+// PROGRAMA PRINCIPAL
+// ===============================================================================
 
 
-// Programa main com argumentos lidos após chamada de execução
+/*
+Função principal (main) para controlar o fluxo do programa
+com base na funcionalidade lida da entrada padrão.
+@return: EXIT_SUCCESS (0) em caso de sucesso, EXIT_FAILURE (1) em caso de erro.
+*/
 int main() {
 
     int funcionalidade;
 
-    // ler a linha dos argumentos pós make run ./trabalhoPrat
+    // Buffer para ler a linha dos argumentos (funcionalidade + nomes de arquivos/qtd)
     char line[1024];
     fgets(line, sizeof(line), stdin);
 
-    // remove '\n' se existir
-    line[strcspn(line, "\n")] = '\0';
+    line[strcspn(line, "\n")] = '\0'; // Remove '\n' se existir
 
-    char *argv[4] = {NULL}; // maximo de 3 argumentos + 1 funcionalidade
+    char *argv[4] = {NULL}; // Array para armazenar os argumentos
     char *rest = strtok(line, " ");
     int index = 0;
 
+    // Tokeniza a linha de entrada
     while (rest != NULL && index < 4) {
         argv[index] = rest;
         index++;
@@ -548,20 +578,26 @@ int main() {
     }
 
     funcionalidade = atoi(argv[0]);
+    
+    // Chama a funcionalidade correta
     switch (funcionalidade) {
         case 1:
+        // Argumentos: 1 [nome_arquivo_indice]
         criarArquivoIndicePrimario(argv[1]);
         break;
 
         case 2:
+        // Argumentos: 2 [arquivo_csv] [arquivo_dados_bin] [arquivo_indice_bin]
         processarCSV(argv[1], argv[2], argv[3]);
         break;
 
         case 3:
+        // Argumentos: 3 [arquivo_dados_bin]
         listarRegistros(argv[1]);
         break;
 
         case 4:
+        // Argumentos: 4 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
         buscarRegistros(argv[1], argv[2], atoi(argv[3]));
         break;
 
