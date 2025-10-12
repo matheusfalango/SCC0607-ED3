@@ -7,13 +7,18 @@ APP_DIR = apps
 SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
-INCLUDE_DIR = include
+MAKE_DIR = make
+HEADERS_DIR = include
+
+# Nome do zip
+ZIPNAME = programaTrab
 
 # Arquivos
 TARGET = $(APP_DIR)/programaTrab
 SRCS = $(SRC_DIR)/programaTrab.c $(SRC_DIR)/utilidades.c $(SRC_DIR)/ArvAVL.c
 OBJS = $(OBJ_DIR)/programaTrab.o $(OBJ_DIR)/utilidades.o $(OBJ_DIR)/ArvAVL.o
-HEADERS = $(INCLUDE_DIR)/ArvAVL.h $(INCLUDE_DIR)/programaTrab.h $(INCLUDE_DIR)/utilidades.h
+HEADERS = $(HEADERS_DIR)/ArvAVL.h $(HEADERS_DIR)/programaTrab.h $(HEADERS_DIR)/utilidades.h
+MAKEFILE = $(MAKE_DIR)/Makefile
 
 # Arquivos de dados a serem limpos
 DATA_FILES = pessoa.bin indexaPessoa.bin
@@ -45,8 +50,13 @@ clean:
 	if exist $(TARGET) del -f $(TARGET)
 	if exist *.bin del -f -q *.bin
 
+# Cria um arquivo .zip para enviar o trabalho
+zip:
+	if exist $(ZIPNAME).zip del $(ZIPNAME).zip
+	powershell -NoProfile -Command "& {Compress-Archive -Path '$(SRC_DIR)\*.c','$(HEADERS_DIR)\*.h','$(MAKEFILE)' -DestinationPath '$(ZIPNAME).zip' -Force}"
+
 # Executa o programa
 run: $(TARGET) | $(BIN_DIR)
 	./$(TARGET)
 
-.PHONY: all clean run
+.PHONY: all clean run zip

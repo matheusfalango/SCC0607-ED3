@@ -84,7 +84,6 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     // Ignorar a primeira linha (cabeçalho do CSV)
     fgets(line, sizeof(line), csv_file);
 
-    long long int atual_byte_offset = 0;
     while (fgets(line, sizeof(line), csv_file) != NULL) {
         PessoaRecord record;
         record.removido = NAO_REMOVIDO_CHAR;
@@ -96,12 +95,12 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
 
         // idPessoa
         token = novo_strtok(rest, ",", &rest);
-        record.idPessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
+        record.idPessoa = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
         
         // nomePessoa
         char nomePessoa_buffer[256];
         token = novo_strtok(rest, ",", &rest);
-        if (token != NULL && strcmp(token, "") != 0) {
+        if (token != NULL && token[0] != '\0') {
             strcpy(nomePessoa_buffer, token);
             record.nomePessoa = trim(nomePessoa_buffer);
             record.tamanhoNomePessoa = strlen(record.nomePessoa);
@@ -112,12 +111,12 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
 
         // idadePessoa
         token = novo_strtok(rest, ",", &rest);
-        record.idadePessoa = (token != NULL && strcmp(token, "") != 0) ? atoi(token) : -1;
+        record.idadePessoa = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
 
         // nomeUsuario
         char nomeUsuario_buffer[256];
         token = novo_strtok(rest, ",", &rest);
-        if (token != NULL && strcmp(token, "") != 0) {
+        if (token != NULL && token[0] != '\0') {
             strcpy(nomeUsuario_buffer, token);
             record.nomeUsuario = trim(nomeUsuario_buffer);
             record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
@@ -131,21 +130,22 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         // Calcular tamanho do registro
         // removido (1) + tamanhoRegistro (4) + idPessoa (4) + idadePessoa (4) + tamanhoNomePessoa (4) + tamanhoNomeUsuario (4)
         record.tamanhoRegistro = 1 + 4 + 4 + 4 + 4 + 4;
-        if (record.nomePessoa != NULL) record.tamanhoRegistro += record.tamanhoNomePessoa;
-        if (record.nomeUsuario != NULL) record.tamanhoRegistro += record.tamanhoNomeUsuario;
+        if (record.nomePessoa != NULL && record.tamanhoNomePessoa != 0) record.tamanhoRegistro += record.tamanhoNomePessoa;
+        if (record.nomeUsuario != NULL && record.tamanhoNomeUsuario != 0) record.tamanhoRegistro += record.tamanhoNomeUsuario;
 
         // Escrever registro no arquivo pessoa.bin
-        atual_byte_offset = ftell(pessoa_bin_file);
+        long long int atual_byte_offset = ftell(pessoa_bin_file);
         //if(atual_byte_offset == 0) fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
         //atual_byte_offset += record.tamanhoRegistro;
+        fseek(pessoa_bin_file, 0, SEEK_END);
         fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
         fwrite(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
         fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, "") != 0) fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+        if (record.nomePessoa != NULL && record.nomePessoa[0] != '\0') fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
         fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, "") != 0) fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        if (record.nomeUsuario != NULL && record.nomeUsuario[0] != '\0') fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
 
         // Atualizar cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
@@ -166,14 +166,15 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
     // Atualizar cabeçalho final do arquivo pessoa.bin
-    //fseek(pessoa_bin_file, 0, SEEK_END);
-    //pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
-    pessoa_header.proxByteOffset = atual_byte_offset;
+    fseek(pessoa_bin_file, 0, SEEK_END);
+    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
+    //pessoa_header.proxByteOffset = atual_byte_offset;
     fseek(pessoa_bin_file, 0, SEEK_SET);
     pessoa_header.status = '1'; // Consistente
     fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
     fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
+    //pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Atualiza o proxByteOffset com o tamanho total do arquivo
     fwrite(&pessoa_header.proxByteOffset, sizeof(long long int), 1, pessoa_bin_file);
 
     // Atualizar cabeçalho final do arquivo de índice
@@ -286,15 +287,13 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
             break;
         }
         numBusca = atoi(token);
-        //printf("n:%d e q:%d\n", numBusca, qtdBusca);
         
-        token = strtok(NULL, " ");
+        token = strtok(NULL, "");
         if (token == NULL) {
             printf("Falha no processamento do arquivo.\n");
             break;
         }
         char *campo_valor = token;
-        //printf("%s\n", campo_valor);
 
         char *igual = strchr(campo_valor, '=');
         if (igual == NULL) {
@@ -304,9 +303,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
         *igual = '\0';
         char *campo = campo_valor;
-        //printf("%s\n", campo);
         char *valor = igual + 1;
-        //printf("%s\n", valor);
 
         // Remover aspas se existirem
         if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {
@@ -343,7 +340,6 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                         record.nomePessoa = NULL;
                         record.nomeUsuario = NULL;
                         fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
-                        printf("%d\n", record.removido);
                         
                         if (record.removido == NAO_REMOVIDO_CHAR) {
                             fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
@@ -447,7 +443,6 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         }
 
         numBusca++;
-        //printf("n:%d e q:%d\n", numBusca, qtdBusca);
     }
     
     fclose(pessoa_bin_file);
