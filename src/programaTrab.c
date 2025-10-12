@@ -250,6 +250,8 @@ void listarRegistros(char *arquivoSaidaBin) {
 
 /*Implementação 4: Busca de uma quantidade de campos 
 seguindo o campo referência dado*/ 
+/*Implementação 4: Busca de uma quantidade de campos 
+seguindo o campo referência dado*/ 
 void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int qtdBusca) {
     FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "rb");
     if (pessoa_bin_file == NULL) {
@@ -268,15 +270,15 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
     ARV* arvoreIndice = criarAVL();
     FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "rb");
-    
+
     if (indice_bin_file != NULL) {
         IndexHeader index_header;
         fseek(indice_bin_file, 0, SEEK_SET);
         fread(&index_header.status, sizeof(char), 1, indice_bin_file);
-        
+
         if (index_header.status == '1') {
             fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
-            
+
             IndexRecord current_index_record;
             while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
                 fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
@@ -285,88 +287,133 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         }
         fclose(indice_bin_file);
     }
-    
-    int numBusca = 1; 
-    
+
+    int numBusca = 1;
+
     while (numBusca <= qtdBusca) {
-
-        // Leitura dos campos
         char linha[256];
+
+        // Limpar buffer e ler linha
+        memset(linha, 0, sizeof(linha));
         if (fgets(linha, sizeof(linha), stdin) == NULL) break;
-        linha[strcspn(linha, "\n")] = '\0';
 
-        char *token = strtok(linha, " ");
+        // Remover \n e \r se existirem
+        linha[strcspn(linha, "\r\n")] = '\0';
+
+        // Pular linhas vazias
+        if (strlen(linha) == 0) continue;
+
+        // Dividir a linha em tokens
+        char linha_copia[256];
+        strcpy(linha_copia, linha);
+
+        char *token = strtok(linha_copia, " ");
         if (token == NULL) {
-            printf("Falha no processamento de leitura.\n");
-            break;
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
         }
-        
-        token = strtok(NULL, "");
+
+        // Pular o número da busca
+        token = strtok(NULL, " ");
         if (token == NULL) {
-            printf("Falha no processamento de leitura.\n");
-            break;
-        }
-        char *campo_valor = token;
-
-        char *igual = strchr(campo_valor, '=');
-        if (igual == NULL) {
-            printf("Falha no processamento de leitura.\n");
-            break;
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
         }
 
-        *igual = '\0';
-        char *campo = campo_valor;
-        char *valor = igual + 1;
+        // Processar campo=valor
+        char campo[50] = {0};
+        char valor[200] = {0};
 
+        // Encontrar o '='
+        char *igual_pos = strchr(token, '=');
+        if (igual_pos == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Copiar campo
+        int campo_len = igual_pos - token;
+        strncpy(campo, token, campo_len);
+        campo[campo_len] = '\0';
+
+        // Copiar valor (tudo após o '=')
+        strcpy(valor, igual_pos + 1);
+
+        // Se houver mais tokens após o campo=valor (para valores com espaços)
+        char *resto = strtok(NULL, "");
+        if (resto != NULL && strlen(resto) > 0) {
+            strcat(valor, " ");
+            strcat(valor, resto);
+        }
+
+        // Remover aspas se existirem
+        char valor_final[200] = {0};
         if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {
-            valor[strlen(valor)-1] = '\0';
-            valor++;
+            strncpy(valor_final, valor + 1, strlen(valor) - 2);
+            valor_final[strlen(valor) - 2] = '\0';
+        } else {
+            strcpy(valor_final, valor);
         }
 
-        // Tirar qualquer tipo de caracter indesejado
-        char *novo_valor = trim(valor);
+        // Remover espaços extras do início e fim
+        char *p_inicio = valor_final;
+        while (*p_inicio == ' ' || *p_inicio == '\t') p_inicio++;
+
+        char *p_fim = valor_final + strlen(valor_final) - 1;
+        while (p_fim > p_inicio && (*p_fim == ' ' || *p_fim == '\t')) {
+            *p_fim = '\0';
+            p_fim--;
+        }
+
+        // Copiar valor limpo
+        if (p_inicio != valor_final) {
+            memmove(valor_final, p_inicio, strlen(p_inicio) + 1);
+        }
 
         int encontrado = 0;
 
         if (strcmp(campo, "idPessoa") == 0) {
-            int idProcurado = atoi(novo_valor);
+            int idProcurado = atoi(valor_final);
 
             NO* noEncontrado = buscarNo(arvoreIndice, idProcurado);
 
             if (noEncontrado != NULL) {
                 long int eByteOffset = noEncontrado->bOffset;
-                
+
                 fseek(pessoa_bin_file, eByteOffset, SEEK_SET);
-                
+
                 PessoaRecord record;
                 record.nomePessoa = NULL;
                 record.nomeUsuario = NULL;
-                
+
                 fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
-                
+
                 if (record.removido == NAO_REMOVIDO_CHAR) {
                     fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-                    
+
                     fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
                     if (record.tamanhoNomePessoa > 0) {
                         record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
                         fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
                         record.nomePessoa[record.tamanhoNomePessoa] = '\0';
                     }
-                    
+
                     fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
                     if (record.tamanhoNomeUsuario > 0) {
                         record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
                         fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
                         record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
                     }
-                    
+
                     printNaTela(record);
                     printf("\n");
                     encontrado = 1;
-                    
+
                     if (record.nomePessoa != NULL) free(record.nomePessoa);
                     if (record.nomeUsuario != NULL) free(record.nomeUsuario);
                 }
@@ -374,57 +421,57 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         } else {
             // Busca sequencial para outros campos
             fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
-            
+
             while (1) {
                 long int atual_byte_offset = ftell(pessoa_bin_file);
-                
+
                 PessoaRecord record;
                 record.nomePessoa = NULL;
                 record.nomeUsuario = NULL;
-                
-                if (fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break; 
-                
+
+                if (fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
+
                 if (record.removido == NAO_REMOVIDO_CHAR) {
                     fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
                     fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-                    
+
                     fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
                     if (record.tamanhoNomePessoa > 0) {
                         record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
                         fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
                         record.nomePessoa[record.tamanhoNomePessoa] = '\0';
                     }
-                    
+
                     fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
                     if (record.tamanhoNomeUsuario > 0) {
                         record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
                         fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
                         record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
                     }
-                    
+
                     int match = 0;
                     if (strcmp(campo, "idadePessoa") == 0) {
-                        int idadeProcurada = atoi(novo_valor);
+                        int idadeProcurada = atoi(valor_final);
                         if (record.idadePessoa == idadeProcurada) {
                             match = 1;
                         }
                     } else if (strcmp(campo, "nomePessoa") == 0) {
-                        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, novo_valor) == 0) {
+                        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, valor_final) == 0) {
                             match = 1;
                         }
                     } else if (strcmp(campo, "nomeUsuario") == 0) {
-                        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, novo_valor) == 0) {
+                        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, valor_final) == 0) {
                             match = 1;
                         }
                     }
-                    
+
                     if (match) {
                         printNaTela(record);
                         printf("\n");
                         encontrado = 1;
                     }
-                    
+
                     if (record.nomePessoa != NULL) free(record.nomePessoa);
                     if (record.nomeUsuario != NULL) free(record.nomeUsuario);
                 } else {
@@ -435,20 +482,19 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
                 }
             }
 
-            // Corrige o problema do EOF/erro de estado do arquivo
+            // Limpar erro de EOF
             clearerr(pessoa_bin_file);
         }
-        
+
         if (!encontrado) {
             printf("Registro inexistente.\n\n");
         }
 
         numBusca++;
     }
-    
+
     liberarAVL(arvoreIndice->raiz);
     free(arvoreIndice);
-
     fclose(pessoa_bin_file);
 }
 

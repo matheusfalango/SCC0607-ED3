@@ -122,7 +122,7 @@ char *novo_strtok(char *str, const char *delim, char **saveptr) {
 char *trim(char *str) {
 
 		int n = strlen(str); // n é o tamanho da str
-    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r')) {
+    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\t')) {
 				n--;
     }
 
