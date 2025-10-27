@@ -7,10 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utilidades.h"
-#include "tratarString.h"
-#include "manipularAVL.h"
-#include "ArvAVL.h"
 
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO SEGUE

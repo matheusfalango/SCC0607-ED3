@@ -8,12 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "utilidades.h"
-#include "tratarString.h"
 #include "manipularAVL.h"
-#include "ArvAVL.h"
-#include "lista.h"
-#include "def.h"
+
+#define NAO_REMOVIDO_CHAR '0'
 
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO PESSOA
@@ -67,13 +64,9 @@ void atualizaCabecPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);
 //Verifica o status do arquivo de pessoa.
 bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);
 
-//Implementação de buscaPessoa: Busca Generalizada Para Enocntrar um Registro Específico
-//Busca um registro de pessoa de acordo com o campo e o valor definido.
-Lista *buscaPessoa(FILE *pessoa_bin_file, char *campo, char *valor_final);
-
 //Implementação de lerRegistroPessoa: Lê um Registro de Pessoa do Arquivo
 //Lê um registro de pessoa do arquivo binário.
-PessoaRecord lerRegistroPessoa(FILE *pessoa_bin_file);
+PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file);
 
 //Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
 //Define o offset atual no arquivo de índice para um ID específico.
@@ -81,7 +74,7 @@ long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado);
 
 //Implementação de filtroCampoPessoa: Filtra um Registro de Pessoa com Base em um Campo e Valor
 //Filtra um registro de pessoa com base em um campo específico e um valor fornecido.
-int filtroCampoPessoa(PessoaRecord pessoa_record, char *campo, char *valor_final);
+int filtroCampoPessoa(PessoaRecord *pessoa_record, char *campo, char *valor_final);
 
 
 #endif

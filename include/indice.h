@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "utilidades.h"
-#include "tratarString.h"
-#include "manipularAVL.h"
 #include "ArvAVL.h"
 
 // ===============================================================================
@@ -47,5 +44,9 @@ void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header);
 //Implementação de statusIndice: Atualiza o Status do Índice Primário
 //Atualiza o status do arquivo de índice primário
 void statusIndice(FILE *indice_bin_file, IndexHeader *index_header, char status);
+
+//Implementação de escreveIndiceArvore: Carrega o arquivo de índice na arvore AVL em memória
+//Lê o arquivo de índice binário e carrega os registros na árvore AVL em memória.
+void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice);
 
 #endif

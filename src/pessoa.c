@@ -113,65 +113,6 @@ bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header) {
     return 1;
 }
 
-/*
-Implementação de buscaPessoa: Busca Generalizada Para Enocntrar um Registro Específico
-Busca um registro de pessoa de acordo com o campo e o valor definido.
-@param pessoa_bin_file: O endereço do arquivo do pessoa.
-@param campo: O campo definido para busca.
-@param valor_final: O valor definido para busca.
-@return: Lista com os registros
-*/
-Lista *buscaPessoa(FILE *pessoa_bin_file, char *campo, char *valor_final) {
-    // Lista para os possíveis resultados
-	Lista *lista = criarLista();
-	if (lista == NULL) return NULL;
-	
-	// Sem campo e valor_final -> todos
-	if (campo == NULL && valor_final == NULL) {
-		// Ler do arquivo de dados e salvar na lista
-		while (1) {
-			PessoaRecord pessoa_record = lerRegistroPessoa(pessoa_bin_file);
-			if (pessoa_record == NULL) {
-				// Acabou
-				break;
-			}
-			
-			addLista(lista, pessoa_record);
-		}
-		
-		return lista;
-	}
-	
- 	if(strcmp(campo, "idPessoa") == 0) {
-        // Busca no indice
-        long int offset = setProcuradoOffset(index, atoi(valor_final));
-
-        if (offset != -1) {
-            // Achar
-            fseek(pessoa_bin_file, 0, SEEK_SET);
-            fseek(pessoa_bin_file, offset, SEEK_SET);
-
-            // Colocar na lista
-            PessoaRecord pessoa_record = lerRegistroPessoa(pessoa_bin_file);					
-			addLista(lista, pessoa_record);				
-        } 
-    } else {
-        while(1){ //ou seja, enquanto for possivel ler os registros de dados
-        	PessoaRecord pessoa_record = lerRegistroPessoa(pessoa_bin_file);
-			if (pessoa_record == NULL) {
-				// Acabou
-				break;
-			}
-			
-	        if(pessoa_record->status == NAO_REMOVIDO_CHAR && filtroCampoPessoa(pessoa_record, campo, valor_final)){ // se os parametros foram encontrados no registro, printar o dado					
-				addLista(lista, pessoa_record);	
-         	}
-        }
-    }
-
-	return lista;
-}
-
 
 /*
 Implementação de lerRegistroPessoa: Lê um Registro de Pessoa do Arquivo
@@ -179,36 +120,37 @@ Lê um registro de pessoa do arquivo binário.
 @param: Ponteiro do arquivo de dados.
 @return: Endereço do registro de dados lido.
 */
-PessoaRecord lerRegistroPessoa(FILE *pessoa_bin_file) {
-    atual_byte_offset = ftell(pessoa_bin_file);
+PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file) {
+    long int atual_byte_offset = ftell(pessoa_bin_file);
 
-    PessoaRecord pessoa_record;
-    pessoa_record.nomePessoa = NULL;
-    pessoa_record.nomeUsuario = NULL;
+    PessoaRecord *pessoa_record = (PessoaRecord *) malloc(sizeof(PessoaRecord));
+    if (pessoa_record == NULL) return NULL;
+    pessoa_record->nomePessoa = NULL;
+    pessoa_record->nomeUsuario = NULL;
     
     // Tenta ler o campo 'removido'
-    if(fread(&pessoa_record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
+    if(fread(&pessoa_record->removido, sizeof(char), 1, pessoa_bin_file) != 1) return NULL;
 
-    if (pessoa_record.removido == NAO_REMOVIDO_CHAR ) {
+    if (pessoa_record->removido == NAO_REMOVIDO_CHAR ) {
         // Registro não removido: lê e processa
-        fread(&pessoa_record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-        fread(&pessoa_record.idPessoa, sizeof(int), 1, pessoa_bin_file);
-        fread(&pessoa_record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
+        fread(&pessoa_record->tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+        fread(&pessoa_record->idPessoa, sizeof(int), 1, pessoa_bin_file);
+        fread(&pessoa_record->idadePessoa, sizeof(int), 1, pessoa_bin_file);
         
         // Leitura de nomePessoa (tamanho + dado)
-        fread(&pessoa_record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (pessoa_record.tamanhoNomePessoa > 0) {
-            pessoa_record.nomePessoa = (char *) malloc(pessoa_record.tamanhoNomePessoa + 1);
-            fread(pessoa_record.nomePessoa, sizeof(char), pessoa_record.tamanhoNomePessoa, pessoa_bin_file);
-            pessoa_record.nomePessoa[pessoa_record.tamanhoNomePessoa] = '\0';
+        fread(&pessoa_record->tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+        if (pessoa_record->tamanhoNomePessoa > 0) {
+            pessoa_record->nomePessoa = (char *) malloc(pessoa_record->tamanhoNomePessoa + 1);
+            fread(pessoa_record->nomePessoa, sizeof(char), pessoa_record->tamanhoNomePessoa, pessoa_bin_file);
+            pessoa_record->nomePessoa[pessoa_record->tamanhoNomePessoa] = '\0';
         }
 
         // Leitura de nomeUsuario (tamanho + dado)
-        fread(&pessoa_record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (pessoa_record.tamanhoNomeUsuario > 0) {
-            pessoa_record.nomeUsuario = (char *) malloc(pessoa_record.tamanhoNomeUsuario + 1);
-            fread(pessoa_record.nomeUsuario, sizeof(char), pessoa_record.tamanhoNomeUsuario, pessoa_bin_file);
-            pessoa_record.nomeUsuario[pessoa_record.tamanhoNomeUsuario] = '\0';
+        fread(&pessoa_record->tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+        if (pessoa_record->tamanhoNomeUsuario > 0) {
+            pessoa_record->nomeUsuario = (char *) malloc(pessoa_record->tamanhoNomeUsuario + 1);
+            fread(pessoa_record->nomeUsuario, sizeof(char), pessoa_record->tamanhoNomeUsuario, pessoa_bin_file);
+            pessoa_record->nomeUsuario[pessoa_record->tamanhoNomeUsuario] = '\0';
         }
     } else {
         // Registro removido, pula
@@ -230,10 +172,8 @@ Define o offset atual no arquivo de índice em memória para um ID específico.
 @return: Valor do byte offset referente ao id da pessoa.
 */
 long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado) {
-    int idProcurado = atoi(valor_final);
-    NO* noEncontrado = buscarNo(arvoreIndice, idProcurado);
-
-    return noEncontrado->byteOffset;
+    NO* noEncontrado = buscarNo(indice_em_memoria, idProcurado);
+    return noEncontrado->bOffset;
 }
 
 /*
@@ -244,20 +184,20 @@ Filtra um registro de pessoa com base em um campo específico e um valor forneci
 @param valor_final:
 @return:
 */
-int filtroCampoPessoa(PessoaRecord pessoa_record, char *campo, char *valor_final) {
+int filtroCampoPessoa(PessoaRecord *pessoa_record, char *campo, char *valor_final) {
     // Compara o campo
     int match = 0;
     if (strcmp(campo, "idadePessoa") == 0) {
         int idadeProcurada = atoi(valor_final);
-        if (record.idadePessoa != -1 && record.idadePessoa == idadeProcurada) {
+        if (pessoa_record->idadePessoa != -1 && pessoa_record->idadePessoa == idadeProcurada) {
             match = 1;
         }
     } else if (strcmp(campo, "nomePessoa") == 0) {
-        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, valor_final) == 0) {
+        if (pessoa_record->nomePessoa != NULL && strcmp(pessoa_record->nomePessoa, valor_final) == 0) {
             match = 1;
         }
     } else if (strcmp(campo, "nomeUsuario") == 0) {
-        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, valor_final) == 0) {
+        if (pessoa_record->nomeUsuario != NULL && strcmp(pessoa_record->nomeUsuario, valor_final) == 0) {
             match = 1;
         }
     }

@@ -64,3 +64,28 @@ void statusIndice(FILE *indice_bin_file, IndexHeader *index_header, char status)
     fseek(indice_bin_file, 0, SEEK_SET);
     fwrite(&index_header->status, sizeof(char), 1, indice_bin_file);
 }
+
+
+/*Implementação de escreveIndiceArvore: Carrega a Árvore AVL com o Conteúdo do Arquivo de Índice
+Lê o arquivo de índice binário e carrega os registros na árvore AVL em memória.
+@param indice_bin_file: Arquivo binário do índice primário.
+@param arvoreIndice: Estrutura para armazenar o conteúdo lido do arquivo índice.
+*/
+void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice) {
+    if (indice_bin_file != NULL) {
+        IndexHeader index_header;
+        fseek(indice_bin_file, 0, SEEK_SET);
+        fread(&index_header.status, sizeof(char), 1, indice_bin_file);
+
+        if (index_header.status == '1') { // Índice consistente
+            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+
+            IndexRecord current_index_record;
+            // Lê cada registro de índice e insere na AVL
+            while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
+                fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
+                atualizaAVL(arvoreIndice, current_index_record.idPessoa, current_index_record.byteOffset);
+            }
+        }
+    }
+}

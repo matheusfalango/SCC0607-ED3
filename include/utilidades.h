@@ -10,8 +10,6 @@
 #include <ctype.h>
 #include "utilidades.h"
 #include "tratarString.h"
-#include "manipularAVL.h"
-#include "ArvAVL.h"
 #include "def.h"
 
 

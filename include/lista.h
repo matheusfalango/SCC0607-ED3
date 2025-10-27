@@ -4,19 +4,17 @@
 #ifndef LISTA_H
 #define LISTA_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include "def.h"
+#include "pessoa.h"
 
 
 // ===============================================================================
-// DEFINIÇÕES PARA LISTA DE REGISTROS
+// DEFINIÇÕES PARA LISTA DE REGISTROS DE PESSOAS
 // ===============================================================================
 
-typedef struct {
-    struct PessoaRecord record; // Registro de pessoa
+#define NAO_REMOVIDO_CHAR '0'
+
+typedef struct No {
+    PessoaRecord *record; // Registro de pessoa
     struct No *prox; // Ponteiro para o próximo nó
 } No;
 
@@ -27,7 +25,7 @@ typedef struct {
 
 
 // ===============================================================================
-// FUNCIONALIDADES PARA LISTA DE REGISTROS
+// FUNCIONALIDADES PARA LISTA DE REGISTROS DE PESSOAS
 // ===============================================================================
 
 //Implementação de criarLista: Criação de uma Lista Vazia
@@ -36,7 +34,7 @@ Lista *criarLista();
 
 //Implementação de addLista: Adiciona um Registro à Lista
 //Adiciona um novo registro à lista de registros de pessoa. 
-void addLista(Lista *lista, PessoaRecord *record);
+void addLista(Lista *lista, PessoaRecord *pessoa_record);
 
 //Implementação de liberarLista: Libera a Memória Alocada para a Lista
 //Libera a memória utilizada pela lista de registros de pessoa.
@@ -45,5 +43,9 @@ void liberarLista(Lista *lista);
 // Implementação de imprimirLista: Imprime os Registros da Lista
 // Imprime todos os registros de pessoa armazenados na lista.
 void imprimirLista(Lista *lista);
+
+//Implementação de buscaPessoa: Busca Generalizada Para Encontrar um Registro Específico
+//Busca um registro de pessoa de acordo com o campo e o valor definido.
+Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *valor_final);
 
 #endif

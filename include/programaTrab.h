@@ -12,6 +12,7 @@
 #include "tratarString.h"
 #include "manipularAVL.h"
 #include "ArvAVL.h"
+#include "lista.h"
 #include "def.h"
 
 

@@ -183,57 +183,15 @@ void listarRegistros(char *arquivoSaidaBin) {
 
     // Pula o cabeçalho
     fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
-    long int atual_byte_offset;
 
     // Busca sequencial dos registros
-    while(1) {
-        atual_byte_offset = ftell(pessoa_bin_file);
+    Lista *lista_registros = buscaPessoa(pessoa_bin_file, NULL, NULL, NULL);
+    
+    //Imprimir lista de registros
+    imprimirLista(lista_registros);
 
-        PessoaRecord record;
-        record.nomePessoa = NULL;
-        record.nomeUsuario = NULL;
-        
-        // Tenta ler o campo 'removido'
-        if(fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
-
-        if (record.removido == NAO_REMOVIDO_CHAR ) {
-            // Registro não removido: lê e processa
-            fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-            fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
-            fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-            
-            // Leitura de nomePessoa (tamanho + dado)
-            fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-            if (record.tamanhoNomePessoa > 0) {
-                record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
-                fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
-                record.nomePessoa[record.tamanhoNomePessoa] = '\0';
-            }
-
-            // Leitura de nomeUsuario (tamanho + dado)
-            fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-            if (record.tamanhoNomeUsuario > 0) {
-                record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
-                fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
-                record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
-            }
-            
-            // Print na tela
-            printNaTela(record);
-            printf("\n");
-            
-        } else {
-            // Registro removido ('1'): pula o restante do registro
-            int tamanhoRegistro;
-            fread(&tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-            // Avança o ponteiro de arquivo pelo tamanho total do registro (sem contar 'removido' e 'tamanhoRegistro')
-            fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro + sizeof(char) + sizeof(int), SEEK_SET);
-        }
-
-        // Libera a memória alocada para as strings do registro atual
-        if (record.nomePessoa != NULL) free(record.nomePessoa);
-        if (record.nomeUsuario != NULL) free(record.nomeUsuario);
-    }
+    //Liberar memória
+    liberarLista(lista_registros);
 
     fclose(pessoa_bin_file);
 }
@@ -263,23 +221,8 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
     FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb");
     if (indice_bin_file == NULL) return;
 
-    if (indice_bin_file != NULL) {
-        IndexHeader index_header;
-        fseek(indice_bin_file, 0, SEEK_SET);
-        fread(&index_header.status, sizeof(char), 1, indice_bin_file);
-
-        if (index_header.status == '1') { // Índice consistente
-            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
-
-            IndexRecord current_index_record;
-            // Lê cada registro de índice e insere na AVL
-            while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
-                fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
-                atualizaAVL(arvoreIndice, current_index_record.idPessoa, current_index_record.byteOffset);
-            }
-        }
-        fclose(indice_bin_file);
-    }
+    escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
+    fclose(indice_bin_file);
 
     // 3. Processa as buscas
     int numBusca = 1;
@@ -340,131 +283,18 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         char valor_final[200];
         scan_string_aspas(valor, valor_final);
 
-        int encontrado = 0;
-
         // 4. Executa a busca
-        if (strcmp(campo, "idPessoa") == 0) {
-            // Busca indexada (AVL)
-            int idProcurado = atoi(valor_final);
-            NO* noEncontrado = buscarNo(arvoreIndice, idProcurado);
+        fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
+        Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        imprimirLista(lista_registros); // imprimir registros encontrados
 
-            if (noEncontrado != NULL) {
-                long int eByteOffset = noEncontrado->bOffset;
-
-                // Acessa o registro diretamente no arquivo de dados
-                fseek(pessoa_bin_file, eByteOffset, SEEK_SET);
-
-                PessoaRecord record;
-                record.nomePessoa = NULL;
-                record.nomeUsuario = NULL;
-
-                fread(&record.removido, sizeof(char), 1, pessoa_bin_file);
-
-                if (record.removido == NAO_REMOVIDO_CHAR) {
-                    // Lê o restante do registro
-                    fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-                    fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
-                    fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-
-                    fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-                    if (record.tamanhoNomePessoa > 0) {
-                        record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
-                        fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
-                        record.nomePessoa[record.tamanhoNomePessoa] = '\0';
-                    }
-
-                    fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-                    if (record.tamanhoNomeUsuario > 0) {
-                        record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
-                        fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
-                        record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
-                    }
-
-                    printNaTela(record);
-                    printf("\n");
-                    encontrado = 1;
-
-                    if (record.nomePessoa != NULL) free(record.nomePessoa);
-                    if (record.nomeUsuario != NULL) free(record.nomeUsuario);
-                }
-            }
-        } else {
-            // Busca sequencial para outros campos ('idadePessoa', 'nomePessoa', 'nomeUsuario')
-            fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
-
-            while (1) {
-                long int atual_byte_offset = ftell(pessoa_bin_file);
-
-                PessoaRecord record;
-                record.nomePessoa = NULL;
-                record.nomeUsuario = NULL;
-
-                if (fread(&record.removido, sizeof(char), 1, pessoa_bin_file) != 1) break;
-
-                if (record.removido == NAO_REMOVIDO_CHAR) {
-                    // Lê o registro
-                    fread(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-                    fread(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
-                    fread(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-
-                    fread(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-                    if (record.tamanhoNomePessoa > 0) {
-                        record.nomePessoa = (char *) malloc(record.tamanhoNomePessoa + 1);
-                        fread(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
-                        record.nomePessoa[record.tamanhoNomePessoa] = '\0';
-                    }
-
-                    fread(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-                    if (record.tamanhoNomeUsuario > 0) {
-                        record.nomeUsuario = (char *) malloc(record.tamanhoNomeUsuario + 1);
-                        fread(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
-                        record.nomeUsuario[record.tamanhoNomeUsuario] = '\0';
-                    }
-
-                    // Compara o campo
-                    int match = 0;
-                    if (strcmp(campo, "idadePessoa") == 0) {
-                        int idadeProcurada = atoi(valor_final);
-                        if (record.idadePessoa != -1 && record.idadePessoa == idadeProcurada) {
-                            match = 1;
-                        }
-                    } else if (strcmp(campo, "nomePessoa") == 0) {
-                        if (record.nomePessoa != NULL && strcmp(record.nomePessoa, valor_final) == 0) {
-                            match = 1;
-                        }
-                    } else if (strcmp(campo, "nomeUsuario") == 0) {
-                        if (record.nomeUsuario != NULL && strcmp(record.nomeUsuario, valor_final) == 0) {
-                            match = 1;
-                        }
-                    }
-
-                    if (match) {
-                        printNaTela(record);
-                        printf("\n");
-                        encontrado = 1;
-                    }
-
-                    if (record.nomePessoa != NULL) free(record.nomePessoa);
-                    if (record.nomeUsuario != NULL) free(record.nomeUsuario);
-
-                } else {
-                    // Registro removido, pula
-                    int tamanhoRegistro;
-                    fread(&tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-                    // Avança o ponteiro de arquivo
-                    fseek(pessoa_bin_file, atual_byte_offset + tamanhoRegistro + sizeof(char) + sizeof(int), SEEK_SET);
-                }
-            }
-
-            // Limpa erro de EOF após a busca
-            clearerr(pessoa_bin_file);
-        }
-
-        if (!encontrado) {
+        // se a lista não tiver nenhum registro encontrado
+        if (lista_registros->tamanho == 0) {
             printf("Registro inexistente.\n\n");
         }
 
-        numBusca++;
+        liberarLista(lista_registros); // liberar memória
+        numBusca++; // atualiza contagem de buscas
     }
 
     // 5. Libera memória
