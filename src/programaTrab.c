@@ -2,8 +2,7 @@
 // 15578973 Murilo Gonzales Vieira
 
 #include "programaTrab.h"
-#include "utilidades.h"
-#include "ArvAVL.h"
+
 
 // ===============================================================================
 // FUNCIONALIDADES PRINCIPAIS
@@ -15,26 +14,11 @@ Cria um arquivo binário de índice com um cabeçalho inicializado.
 @param nomeArquivoIndice: Nome do arquivo de índice a ser criado.
 */
 void criarArquivoIndicePrimario(char *nomeArquivoIndice) {
-    FILE *indice_bin_file = fopen(nomeArquivoIndice, "wb");
-    if (indice_bin_file == NULL) {
-        printf("Falha no processamento do arquivo.\n");
-        return;
-    }
+    FILE *indice_bin_file = abrirIndice(nomeArquivoIndice, "wb");
+    if (indice_bin_file == NULL) return;
 
-    IndexHeader header;
-    header.status = '0'; // Status '0': Inconsistente (em escrita)
-
-    fseek(indice_bin_file, 0 ,SEEK_SET);
-    fwrite(&header.status, sizeof(char), 1, indice_bin_file);
-    
-    // Preenche os 11 bytes restantes do cabeçalho com lixo '$'
-    for (int i = 0; i < 11; i++) {
-        fputc(LIXO_CHAR, indice_bin_file);
-    }
-
-    header.status = '1'; // Status '1': Consistente (escrita finalizada)
-    fseek(indice_bin_file, 0, SEEK_SET);
-    fwrite(&header.status, sizeof(char), 1, indice_bin_file);
+    IndexHeader index_header;
+    initCabecIndice(indice_bin_file, &index_header); // Função para inicializar cabeçalho no arquivo
 
     fclose(indice_bin_file);
     binarioNaTela(nomeArquivoIndice); // Função de debug
@@ -58,41 +42,19 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         return;
     }
 
-    FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "wb");
-    if (pessoa_bin_file == NULL) {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(csv_file);
-        return;
-    }
+    FILE *pessoa_bin_file = abrirPessoa(arquivoSaidaBin ,"wb"); // criar e escrever no novo arquivo
+    if(pessoa_bin_file == NULL) {fclose(csv_file); return;}
 
-    FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "r+b"); // r+b para ler e escrever
-    if (indice_bin_file == NULL) {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(csv_file);
-        fclose(pessoa_bin_file);
-        return;
-    }
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // r+b para ler e escrever
+    if (indice_bin_file == NULL) {fclose(csv_file); fclose(pessoa_bin_file); return;}
 
     // 1. Inicializar cabeçalho do arquivo pessoa.bin (dados)
     PessoaHeader pessoa_header;
-    pessoa_header.status = '0'; 
-    pessoa_header.quantidadePessoas = 0;
-    pessoa_header.quantidadeRemovidos = 0;
-    pessoa_header.proxByteOffset = PESSOA_HEADER_SIZE; 
-    
-    // Escreve cabeçalho inicial no arquivo de dados
-    fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
+    initCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 2. Atualizar status do cabeçalho do arquivo de índice para '0' (inconsistente)
     IndexHeader index_header;
-    fseek(indice_bin_file, 0, SEEK_SET);
-    fread(&index_header.status, sizeof(char), 1, indice_bin_file); // Lê o status atual
-    index_header.status = '0';
-    fseek(indice_bin_file, 0, SEEK_SET);
-    fwrite(&index_header.status, sizeof(char), 1, indice_bin_file);
+    statusIndice(indice_bin_file, &index_header, '0');    
 
     // 3. Criar árvore AVL para o índice em memória
     ARV* arvoreIndice = criarAVL();
@@ -179,29 +141,20 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         index_record.byteOffset = atual_byte_offset;
         atualizaAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
 
-        // 8. Liberar memória alocada pelo trim
+        // 8. Liberar memória alocada
         if (record.nomePessoa != NULL) free(record.nomePessoa);
         if (record.nomeUsuario != NULL) free(record.nomeUsuario);
     }
 
-    // 9. Escrever a árvore AVL no arquivo de índice (em ordem crescente)
+    // 9. Escrever a árvore AVL no terminal (em ordem crescente)
     fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
     // 10. Atualizar cabeçalho final do arquivo pessoa.bin (dados)
-    fseek(pessoa_bin_file, 0, SEEK_END);
-    pessoa_header.proxByteOffset = ftell(pessoa_bin_file); // Tamanho total do arquivo
-    fseek(pessoa_bin_file, 0, SEEK_SET);
-    pessoa_header.status = '1'; // Consistente
-    fwrite(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
-    fwrite(&pessoa_header.proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
+    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 11. Atualizar cabeçalho final do arquivo de índice
-    fseek(indice_bin_file, 0, SEEK_SET);
-    index_header.status = '1'; // Consistente
-    fwrite(&index_header.status, sizeof(char), 1, indice_bin_file);
+    statusIndice(indice_bin_file, &index_header, '1');
 
     // 12. Fechar arquivos e liberar memória
     fclose(csv_file);
@@ -303,17 +256,12 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
-    fseek(pessoa_bin_file, 0, SEEK_SET);
-    fread(&pessoa_header.status, sizeof(char), 1, pessoa_bin_file);
-    if (pessoa_header.status == '0') {
-        printf("Falha no processamento do arquivo.\n");
-        fclose(pessoa_bin_file);
-        return;
-    }
+    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
 
     // 2. Carrega o índice para a Árvore AVL em memória
     ARV* arvoreIndice = criarAVL();
-    FILE *indice_bin_file = fopen(arquivoIndicePrimarioBin, "rb");
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb");
+    if (indice_bin_file == NULL) return;
 
     if (indice_bin_file != NULL) {
         IndexHeader index_header;
@@ -363,8 +311,8 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         }
 
         // Processa campo=valor
-        char campo[50] = {0};
-        char valor[200] = {0};
+        char campo[50];
+        char valor[200];
 
         char *igual_pos = strchr(token, '=');
         if (igual_pos == NULL) {
@@ -389,23 +337,8 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
         }
 
         // Limpa o valor (remove aspas e espaços extras)
-        char valor_final[200] = {0};
-        if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {
-            strncpy(valor_final, valor + 1, strlen(valor) - 2);
-            valor_final[strlen(valor) - 2] = '\0';
-        } else {
-            strcpy(valor_final, valor);
-        }
-        char *p_inicio = valor_final;
-        while (*p_inicio == ' ' || *p_inicio == '\t') p_inicio++;
-        char *p_fim = valor_final + strlen(valor_final) - 1;
-        while (p_fim > p_inicio && (*p_fim == ' ' || *p_fim == '\t')) {
-            *p_fim = '\0';
-            p_fim--;
-        }
-        if (p_inicio != valor_final) {
-            memmove(valor_final, p_inicio, strlen(p_inicio) + 1);
-        }
+        char valor_final[200];
+        scan_string_aspas(valor, valor_final);
 
         int encontrado = 0;
 
@@ -599,6 +532,30 @@ int main() {
         case 4:
         // Argumentos: 4 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
         buscarRegistros(argv[1], argv[2], atoi(argv[3]));
+        break;
+
+        case 5:
+        // Argumentos: 5 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        break;
+
+        case 6:
+        // Argumentos: 6 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        break;
+
+        case 7:
+        // Argumentos: 7 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        break;
+
+        case 8:
+        // Argumentos: 8 [arquivo_csv] [arquivo_segue_bin]
+        break;
+
+        case 9:
+        // Argumentos: 9 [arquivo_segue_bin] [arquivo_segue_ordenado_bin]
+        break;
+
+        case 10:
+        // Argumentos: 10 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin] [qtd_buscas]
         break;
 
         default:

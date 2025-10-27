@@ -9,56 +9,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "utilidades.h"
+#include "tratarString.h"
+#include "manipularAVL.h"
 #include "ArvAVL.h"
+#include "def.h"
 
 
 // ===============================================================================
-// DEFINIÇÕES
-// ===============================================================================
-
-// Definições para o arquivo pessoa.bin - registro de dados
-#define PESSOA_HEADER_SIZE 17 // Tamanho fixo do cabeçalho de dados (char + int + int + long int = 1 + 4 + 4 + 8)
-#define REMOVIDO_CHAR '1' // Caractere que indica que o registro foi removido
-#define NAO_REMOVIDO_CHAR '0' // Caractere que indica que o registro NÃO foi removido
-#define LIXO_CHAR '$' // Caractere de preenchimento de lixo
-
-// Estrutura do cabeçalho do arquivo de dados (pessoa.bin)
-typedef struct {
-    char status; // '0' (inconsistente) ou '1' (consistente)
-    int quantidadePessoas; // Número total de registros não removidos
-    int quantidadeRemovidos; // Número total de registros removidos
-    long int proxByteOffset; // Byte offset do próximo registro a ser inserido (ou tamanho total do arquivo)
-} PessoaHeader;
-
-// Estrutura do registro de dados (pessoa.bin)
-typedef struct {
-    char removido; // '0' não removido, '1' removido
-    int tamanhoRegistro; // Tamanho total do registro em bytes (exclui 'removido' e 'tamanhoRegistro')
-    int idPessoa; // ID da pessoa (chave primária)
-    int idadePessoa; // Idade da pessoa
-    int tamanhoNomePessoa; // Tamanho em bytes da string nomePessoa
-    char *nomePessoa; // String nomePessoa (alocada dinamicamente)
-    int tamanhoNomeUsuario; // Tamanho em bytes da string nomeUsuario
-    char *nomeUsuario; // String nomeUsuario (alocada dinamicamente)
-} PessoaRecord;
-
-// Definições para o arquivo indexaPessoa.bin - registro de indíces
-#define INDEX_HEADER_SIZE 12 // Tamanho fixo do cabeçalho de índice (char + 11 lixo = 1 + 11)
-
-// Estrutura do cabeçalho do arquivo de índice (indexaPessoa.bin)
-typedef struct {
-    char status; // '0' (inconsistente) ou '1' (consistente)
-    char lixo[11]; // 11 bytes de lixo para completar o cabeçalho
-} IndexHeader;
-
-// Estrutura do registro de índice (indexaPessoa.bin)
-typedef struct {
-    int idPessoa; // ID da pessoa (chave)
-    long int byteOffset; // Byte offset do registro correspondente no arquivo de dados
-} IndexRecord;
-
-// ===============================================================================
-// FUNCIONALIDADES
+// FUNCIONALIDADES - PARTE INTRODUTÓRIA
 // ===============================================================================
 
 // Funcionalidade 1: Criação de Arquivo de Índice Primário
@@ -77,8 +35,36 @@ void listarRegistros(char *arquivoSaidaBin);
 // Realiza buscas indexadas (por idPessoa) ou sequenciais (outros campos) no arquivo de dados.
 void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
 
-// Função complementar: printar registros na tela
-// Imprime os dados de um registro de pessoa no formato exigido.
-void printNaTela(PessoaRecord record);
+
+// ===============================================================================
+// FUNCIONALIDADES - PARTE 1
+// ===============================================================================
+
+// Funcionalidade 5: Remoção Lógica de um registro de dados do arquivo pessoa.bin
+// Seguindo a funcionalidade 4 (busca), encontra o registro e remove-o logicamente
+void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
+
+// Funcionalidade 6: Inserção de Novos Registros de dados no arquivo pessoa.bin
+// Insere o novo registro ao final do arquivo pessoa.bin sem reaproveitamento de espaço dos registros removidos
+void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
+
+// Funcionalidade 7: Atualização de Registros existentes do arquivo pessoa.bin com busca do campo a ser alterado
+// Busca do registro com referência ao campo, tratando o reaproveitamento de espaço da modificação dos registros
+void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
+
+// Funcionalidade 8: Criação de Arquivo Binário Segue
+// Cria o arquivo de segue binário com o cabeçalho inicializado e com o processamento do CSV
+void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin);
+
+// Funcionalidade 9: Ordenar o Arquivo Segue de acordo com o campo idPessoaQueSegue de forma crescente
+// Leitura do arquivo segue armazenado em RAM e ordenado de forma crescente seguindo os critérios;
+// ao fim, criar um novo arquivo de dados segueOrdenado
+void ordenarArquivoSegue(char *arquivoSegueDesordenado, char *arquivoSegueOrdenado);
+
+// Funcionalidade 10: Junção dos Arquivos de Dados pessoa.bin e segueOrdenado.bin 
+// Relaciona-se pelo idPessoa e pelo idPessoaQueSegue para mesclar os arquivos, para retornar os registros
+// de idPessoa presentes no arquivo segueOrdenado.bin comparado ao campo idPessoaQueSegue
+void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, char *arquivoSegueOrdenado, int qtdBusca);
+
 
 #endif

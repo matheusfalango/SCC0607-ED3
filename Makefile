@@ -15,9 +15,9 @@ ZIPNAME = programaTrab
 
 # Arquivos
 TARGET = $(APP_DIR)/programaTrab
-SRCS = $(SRC_DIR)/programaTrab.c $(SRC_DIR)/utilidades.c $(SRC_DIR)/ArvAVL.c
-OBJS = $(OBJ_DIR)/programaTrab.o $(OBJ_DIR)/utilidades.o $(OBJ_DIR)/ArvAVL.o
-HEADERS = $(HEADERS_DIR)/ArvAVL.h $(HEADERS_DIR)/programaTrab.h $(HEADERS_DIR)/utilidades.h
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+HEADERS = $(wildcard $(HEADERS_DIR)/*.h)
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 MAKEFILE = $(MAKE_DIR)/Makefile
 
 # Arquivos de dados a serem limpos
@@ -36,28 +36,27 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) | $(OBJ_DIR)
 
 # Cria diretórios se não existirem
 $(APP_DIR):
-	if not exist $(APP_DIR) mkdir $(APP_DIR)
+	mkdir -p $(APP_DIR)
 
 $(BIN_DIR):
-	if not exist $(BIN_DIR) mkdir $(BIN_DIR)
+	mkdir -p $(BIN_DIR)
 
 $(OBJ_DIR):
-	if not exist $(OBJ_DIR) mkdir $(OBJ_DIR)
+	mkdir -p $(OBJ_DIR)
 
 # Limpa arquivos compilados e dados
 clean:
-	if exist $(OBJ_DIR)\*.o del -f $(OBJ_DIR)\*.o
-	if exist $(TARGET) del -f $(TARGET)
-	if exist pessoa.bin del -f -q pessoa.bin
-	if exist indexaPessoa.bin del -f -q indexaPessoa.bin
+	rm -f $(OBJ_DIR)/*.o
+	rm -f $(TARGET)
+	rm -f $(DATA_FILES)
 
-# Cria um arquivo .zip para enviar o trabalho
+# Cria um arquivo .zip para envio
 zip:
-	if exist $(ZIPNAME).zip del $(ZIPNAME).zip
-	powershell -NoProfile -Command "& {Compress-Archive -Path '$(SRC_DIR)\*.c','$(HEADERS_DIR)\*.h','$(MAKEFILE)' -DestinationPath '$(ZIPNAME).zip' -Force}"
+	rm -f $(ZIPNAME).zip
+	zip -r $(ZIPNAME).zip $(SRC_DIR)/*.c $(HEADERS_DIR)/*.h $(MAKEFILE)
 
 # Executa o programa
-run: $(TARGET) | $(BIN_DIR)
+run: $(TARGET)
 	./$(TARGET)
 
 .PHONY: all clean run zip
