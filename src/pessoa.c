@@ -95,6 +95,22 @@ void atualizaCabecPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header) {
 
 
 /*
+Implementação de statusPessoa: Atualiza o Status do Arquivo Pessoa
+Atualiza o status do arquivo de pessoa
+@param pessoa_bin_file: O endereço do arquivo do pessoa.
+@param pessoa_header: A estrutura do cabeçalho do arquivo do pessoa.
+@param status: O char atual para definir o status atual do arquivo do pessoa.
+*/
+void statusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header, char status) {
+    fseek(pessoa_bin_file, 0, SEEK_SET);
+    fread(&pessoa_header->status, sizeof(char), 1, pessoa_bin_file); // Lê o status atual
+    pessoa_header->status = status;
+    fseek(pessoa_bin_file, 0, SEEK_SET);
+    fwrite(&pessoa_header->status, sizeof(char), 1, pessoa_bin_file);
+}
+
+
+/*
 Implementação de verificaStatusPessoa: Verifica o Status de Consistência do Arquivo
 Verifica o status do arquivo de pessoa.
 @param pessoa_bin_file: O endereço do arquivo do pessoa.
@@ -188,16 +204,20 @@ int filtroCampoPessoa(PessoaRecord *pessoa_record, char *campo, char *valor_fina
     // Compara o campo
     int match = 0;
     if (strcmp(campo, "idadePessoa") == 0) {
-        int idadeProcurada = atoi(valor_final);
+        int idadeProcurada = (strcmp(valor_final, "NULO") != 0) ? atoi(valor_final) : -1;
         if (pessoa_record->idadePessoa != -1 && pessoa_record->idadePessoa == idadeProcurada) {
             match = 1;
         }
     } else if (strcmp(campo, "nomePessoa") == 0) {
         if (pessoa_record->nomePessoa != NULL && strcmp(pessoa_record->nomePessoa, valor_final) == 0) {
             match = 1;
+        } else if (pessoa_record->tamanhoNomePessoa == 0 && strcmp(valor_final, "NULO") == 0) {
+            match = 1;
         }
     } else if (strcmp(campo, "nomeUsuario") == 0) {
         if (pessoa_record->nomeUsuario != NULL && strcmp(pessoa_record->nomeUsuario, valor_final) == 0) {
+            match = 1;
+        } else if (pessoa_record->tamanhoNomeUsuario == 0 && strcmp(valor_final, "NULO") == 0) {
             match = 1;
         }
     }

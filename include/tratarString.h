@@ -15,7 +15,7 @@
 
 // Versão do scan_quote_string 
 // @return: Nova string alocada após tratamento dos caracteres indesejados e aspas
-void scan_string_aspas(char *valor, char *valor_final);
+void scan_string_aspas(char *valor_final, char *valor);
 
 // Versão de strtok que não pula delimitadores consecutivos (para parsing de CSV com campos vazios).
 // @return: Uma nova string alocada que foi lida antes do delimitador

@@ -1,0 +1,6 @@
+7 pessoas.bin indice.bin 5
+1 idPessoa=268 idPessoa=1234
+2 idadePessoa=NULO idadePessoa=18
+3 nomePessoa=NULO nomePessoa="FANTASMA"
+4 nomePessoa="NAOEXISTE" idPessoa=1
+5 nomeUsuario="AFERREIRA" nomeUsuario="ANAFER"

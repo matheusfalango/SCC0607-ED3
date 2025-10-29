@@ -13,6 +13,9 @@
 // Wrapper para insereNo da AVL.
 void atualizaAVL(ARV* arv, int id, long int bOffset);
 
+// Função de remover um nó na Árvore AVL.
+void removeNoAVL(ARV* arv, int id);
+
 // Percorre a AVL em ordem crescente (inorder) e escreve os índices no arquivo binário.
 void printCrescIndice(NO* raiz, FILE* indice_bin_file);
 

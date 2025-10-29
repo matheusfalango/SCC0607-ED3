@@ -98,9 +98,49 @@ void imprimirLista(Lista *lista) {
 
 
 /*
-Implementação de buscaPessoa: Busca Generalizada Para Enocntrar um Registro Específico
-Busca um registro de pessoa de acordo com o campo e o valor definido.
+Implementação de deletarPessoaDaLista: Remove os Registros da Lista
+Remove os registros de pessoa da lista que possui os registros de acordo com a busca
+referenciada pelo campo.
 @param pessoa_bin_file: O endereço do arquivo do pessoa.
+@param arvoreIndice: O arquivo índice em memória pela estrutura da árvore AVL.
+@param lista: Ponteiro para a lista de registros a serem deletados.
+*/
+void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista) {
+    if (lista == NULL || arvoreIndice == NULL) return;
+
+    No *atual = lista->inicio;
+    long int atualOffset;
+    int atualId;
+    PessoaRecord *atualRecord;
+
+    while (atual->prox != NULL) {
+        // Atualiza id e offset do registro atual
+        atualRecord = atual->record;
+        atualId = atualRecord->idPessoa;
+        atualOffset = setProcuradoOffset(arvoreIndice, atualId);
+
+        // Remove o nó do registro na AVL
+        removeNoAVL(arvoreIndice, atualId);
+
+        // Remove logicamente o registro no arquivo pessoa
+        fseek(pessoa_bin_file, atualOffset, SEEK_SET);
+        fread(&atualRecord->removido, sizeof(char), 1, pessoa_bin_file); // Lê o removido atual
+        atualRecord->removido = REMOVIDO_CHAR;
+        fseek(pessoa_bin_file, atualOffset, SEEK_SET);
+        fwrite(&atualRecord->removido, sizeof(char), 1, pessoa_bin_file);
+
+        atual = atual->prox;
+    }
+
+}
+
+
+/*
+Implementação de buscaPessoa: Busca Generalizada Para Enocntrar um Registro Específico
+Busca um registro de pessoa de acordo com o campo e o valor definido; busca sequencial para ler todos os registros
+e para encontrar os campos específicos, exceto para idPessoa que utiliza-se busca binária.
+@param pessoa_bin_file: O endereço do arquivo do pessoa.
+@param arvoreIndice: O arquivo índice em memória pela estrutura da árvore AVL.
 @param campo: O campo definido para busca.
 @param valor_final: O valor definido para busca.
 @return: Lista com os registros
@@ -124,7 +164,6 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
 			}
 			
 			addLista(lista, temp);
-            lista->tamanho++;
 		}
 
 	} else if (campo != NULL && valor_final != NULL && arvoreIndice != NULL) {
@@ -140,7 +179,6 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
                 // Colocar na lista
                 temp = lerRegistroPessoa(pessoa_bin_file);					
     			addLista(lista, temp);
-                lista->tamanho++;
             } 
         } else {
             // Busca sequencial no arquivo de pessoas
@@ -153,7 +191,6 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
             
     	        if(temp->removido == NAO_REMOVIDO_CHAR && filtroCampoPessoa(temp, campo, valor_final)){ // se os parametros foram encontrados no registro, add na lista					
     				addLista(lista, temp);
-                    lista->tamanho++;
              	}
             }
         }
@@ -161,3 +198,4 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
 
 	return lista;
 }
+

@@ -13,7 +13,7 @@ caracteres indesejados após a leiura.
 @param valor: String a ser tratada.
 @return: Ponteiro da nova string alocada.
 */
-void scan_string_aspas(char* valor, char* valor_final) {
+void scan_string_aspas(char *valor_final, char* valor) {
 	// Limpa o valor (remove aspas e espaços extras)
 
 	if (valor[0] == '"' && valor[strlen(valor)-1] == '"') {

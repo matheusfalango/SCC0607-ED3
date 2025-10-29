@@ -42,12 +42,12 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 // ===============================================================================
 
 // Funcionalidade 5: Remoção Lógica de um registro de dados do arquivo pessoa.bin
-// Seguindo a funcionalidade 4 (busca), encontra o registro e remove-o logicamente
-void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
+// Seguindo a funcionalidade de busca, encontra o registro e remove-o logicamente
+void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdDelete);
 
 // Funcionalidade 6: Inserção de Novos Registros de dados no arquivo pessoa.bin
 // Insere o novo registro ao final do arquivo pessoa.bin sem reaproveitamento de espaço dos registros removidos
-void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca);
+void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdInseridos);
 
 // Funcionalidade 7: Atualização de Registros existentes do arquivo pessoa.bin com busca do campo a ser alterado
 // Busca do registro com referência ao campo, tratando o reaproveitamento de espaço da modificação dos registros

@@ -60,6 +60,10 @@ void initCabecPessoa(FILE *pessoa_bin_file ,PessoaHeader* pessoa_header);
 //Atualiza o cabeçalho do arquivo de pessoa.
 void atualizaCabecPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);
 
+//Implementação de statusPessoa: Atualiza o Status do Arquivo Pessoa
+//Atualiza o status do arquivo de pessoa
+void statusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header, char status);
+
 //Implementação de verificaStatusPessoa: Verifica o Status de Consistência do Arquivo
 //Verifica o status do arquivo de pessoa.
 bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);

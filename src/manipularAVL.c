@@ -19,6 +19,17 @@ void atualizaAVL(ARV* arv, int id, long int bOffset) {
 
 
 /*
+Função de remover um nó na Árvore AVL.
+@param arv: Ponteiro para a Árvore AVL.
+@param id: ID do registro a ser inserido (chave primária).
+*/
+void removeNoAVL(ARV* arv, int id) {
+		removerNo(arv, id);
+
+}
+
+
+/*
 Função para percorrer a Árvore AVL em ordem crescente (inorder) e 
 escrever os índices no arquivo binário.
 @param raiz: Ponteiro para o nó raiz da subárvore atual.

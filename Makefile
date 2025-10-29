@@ -53,7 +53,7 @@ clean:
 # Cria um arquivo .zip para envio
 zip:
 	rm -f $(ZIPNAME).zip
-	zip -r $(ZIPNAME).zip $(SRC_DIR)/*.c $(HEADERS_DIR)/*.h $(MAKEFILE)
+	zip -j $(ZIPNAME).zip $(SRC_DIR)/*.c $(HEADERS_DIR)/*.h $(MAKEFILE)
 
 # Executa o programa
 run: $(TARGET)

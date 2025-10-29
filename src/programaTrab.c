@@ -146,7 +146,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         if (record.nomeUsuario != NULL) free(record.nomeUsuario);
     }
 
-    // 9. Escrever a árvore AVL no terminal (em ordem crescente)
+    // 9. Escrever a árvore AVL no arquivo índice (em ordem crescente)
     fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
 
@@ -175,11 +175,8 @@ os registros NÃO REMOVIDOS.
 @param arquivoSaidaBin: Nome do arquivo binário de dados (pessoa.bin).
 */
 void listarRegistros(char *arquivoSaidaBin) {
-    FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "rb");
-    if (pessoa_bin_file == NULL) {
-        printf("Falha no processamento do arquivo.\n");
-        return;
-    }
+    FILE *pessoa_bin_file = abrirPessoa(arquivoSaidaBin ,"rb"); // ler no novo arquivo
+    if(pessoa_bin_file == NULL) return;
 
     // Pula o cabeçalho
     fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
@@ -206,11 +203,8 @@ para buscas por 'idPessoa' e busca sequencial para outros campos.
 @param qtdBusca: Número de buscas a serem realizadas.
 */
 void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int qtdBusca) {
-    FILE *pessoa_bin_file = fopen(arquivoSaidaBin, "rb");
-    if (pessoa_bin_file == NULL) {
-        printf("Falha no processamento do arquivo.\n");
-        return;
-    }
+    FILE *pessoa_bin_file = abrirPessoa(arquivoSaidaBin ,"rb"); // ler no novo arquivo
+    if(pessoa_bin_file == NULL) return;
 
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
@@ -281,7 +275,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
         // Limpa o valor (remove aspas e espaços extras)
         char valor_final[200];
-        scan_string_aspas(valor, valor_final);
+        scan_string_aspas(valor_final, valor);
 
         // 4. Executa a busca
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
@@ -302,6 +296,293 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
     free(arvoreIndice);
     fclose(pessoa_bin_file);
 }
+
+/*
+Funcionalidade 5: Remoção Lógica de um Registro de Dados do Arquivo pessoa.bin
+Seguindo a busca de registro de dados geral, encontra-se o registro e remove-o logicamente.
+@param arquivoEntradaBin: Nome do arquivo binário de dados (pessoa.bin).
+@param arquivoIndicePrimarioBin: Nome do arquivo binário de índice (indexaPessoa.bin).
+@param qtdDelete: Número de registros a serem deletados.
+*/
+void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdDelete) {
+    FILE *pessoa_bin_file = abrirPessoa(arquivoEntradaBin ,"r+b"); // ler e escrever no novo arquivo
+    if(pessoa_bin_file == NULL) return;
+
+    // 1. Verifica consistência do arquivo de dados
+    PessoaHeader pessoa_header;
+    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+
+    // 2. Carrega o índice para a Árvore AVL em memória
+    ARV* arvoreIndice = criarAVL();
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb"); // leitura
+    if (indice_bin_file == NULL) return;
+
+    escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
+    fclose(indice_bin_file);
+
+    // 3. Processa as buscas para deletar logicamente
+    int numDeletados = 1;
+    while (numDeletados <= qtdDelete) {
+        char linha[256];
+        
+        // Lê a linha de comando de busca
+        memset(linha, 0, sizeof(linha));
+        if (fgets(linha, sizeof(linha), stdin) == NULL) break;
+        linha[strcspn(linha, "\r\n")] = '\0'; // Remove \n e \r
+        if (strlen(linha) == 0) continue; // Pula linhas vazias
+
+        // Prepara a linha para tokenização (ex: "1 campo=valor")
+        char linha_copia[256];
+        strcpy(linha_copia, linha);
+
+        char *token = strtok(linha_copia, " ");
+        if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numDeletados++;
+            continue;
+        }
+
+        token = strtok(NULL, " "); // Pula o número da busca
+        if (token == NULL) {
+            printf("Registro inexistente.\n\n");
+            numDeletados++;
+            continue;
+        }
+
+        // Processa campo=valor
+        char campo[50];
+        char valor[200];
+
+        char *igual_pos = strchr(token, '=');
+        if (igual_pos == NULL) {
+            printf("Registro inexistente.\n\n");
+            numDeletados++;
+            continue;
+        }
+
+        // Extrai 'campo'
+        int campo_len = igual_pos - token;
+        strncpy(campo, token, campo_len);
+        campo[campo_len] = '\0';
+
+        // Extrai 'valor'
+        strcpy(valor, igual_pos + 1);
+
+        // Trata valores com espaços (se houver mais tokens)
+        char *resto = strtok(NULL, "");
+        if (resto != NULL && strlen(resto) > 0) {
+            strcat(valor, " ");
+            strcat(valor, resto);
+        }
+
+        // Limpa o valor (remove aspas e espaços extras)
+        char valor_final[200];
+        scan_string_aspas(valor_final, valor);
+
+        // 4. Executa a busca dos registros
+        fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
+        Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        if(lista_registros->tamanho > 0) {
+            // 5. Deleta os registros da lista
+            statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // inconsistente para deletar registros logicamente
+            deletarPessoaDaLista(pessoa_bin_file, arvoreIndice, lista_registros);
+
+            // 6. Abertura do arquivo índice para reescrita
+            FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "wb"); // escrita em um novo arquivo limpo
+            if (indice_bin_file == NULL) return;
+
+            IndexHeader index_header;
+            initCabecIndice(indice_bin_file, &index_header); // Função para inicializar cabeçalho no arquivo
+            statusIndice(indice_bin_file, &index_header, '0'); // Inconsistente durante escrita
+
+            // 7. Escrever a árvore AVL no arquivo índice (em ordem crescente)
+            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
+            printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+            statusIndice(indice_bin_file, &index_header, '1');
+            fclose(indice_bin_file);
+
+            // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
+            pessoa_header.quantidadeRemovidos += lista_registros->tamanho;
+            atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
+
+        } else if (lista_registros->tamanho == 0) {
+            // se a lista não tiver nenhum registro encontrado
+            printf("Registro inexistente.\n\n");
+        }
+
+        liberarLista(lista_registros); // liberar memória
+        numDeletados++; // atualiza contagem de buscas
+    }
+
+    // 9. Libera memória
+    liberarAVL(arvoreIndice->raiz);
+    free(arvoreIndice);
+    fclose(pessoa_bin_file);
+
+    binarioNaTela(arquivoEntradaBin);
+    binarioNaTela(arquivoIndicePrimarioBin);
+}
+
+
+/*
+Funcionalidade 6: Inserção de Novos Registros de dados no arquivo pessoa.bin
+Insere o novo registro ao final do arquivo pessoa.bin sem reaproveitamento de espaço dos registros removidos
+@param arquivoEntradaBin: Nome do arquivo binário de dados (pessoa.bin).
+@param arquivoIndicePrimarioBin: Nome do arquivo binário de índice (indexaPessoa.bin).
+@param qtdInseridos: Número de registros a serem inseridos.
+*/
+void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdInseridos) {
+    // Abertura dos arquivos
+    FILE *pessoa_bin_file = abrirPessoa(arquivoEntradaBin ,"r+b"); // criar e escrever no novo arquivo
+    if(pessoa_bin_file == NULL) return;
+
+    // 1. Verifica consistência do arquivo de dados pessoa e atualiza consistência
+    PessoaHeader pessoa_header;
+    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
+    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    statusPessoa(pessoa_bin_file, &pessoa_header, '0');
+    fseek(pessoa_bin_file, 0, SEEK_END);
+
+    // 2. Carrega o índice para a Árvore AVL em memória
+    ARV* arvoreIndice = criarAVL();
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb"); // leitura
+    if (indice_bin_file == NULL) return;
+
+    escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
+    fclose(indice_bin_file);
+
+    // 3. Processa as buscas para inserir os registros
+    int numInseridos = 1;
+    while(numInseridos <= qtdInseridos) {
+        char linha[256];
+        
+        // Lê a linha de comando de busca
+        memset(linha, 0, sizeof(linha));
+        if (fgets(linha, sizeof(linha), stdin) == NULL) break;
+        linha[strcspn(linha, "\r\n")] = '\0'; // Remove \n e \r
+        if (strlen(linha) == 0) continue; // Pula linhas vazias
+
+        // Prepara a linha para tokenização (ex: "1 idPessoa, "nomePessoa", idadePessoa, "nomeUsuario")
+        char linha_copia[256];
+        strcpy(linha_copia, linha);
+
+        char *token = strtok(linha_copia, " ");
+        if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numInseridos++;
+            continue;
+        }
+
+        // Trata idPessoa, "nomePessoa", idadePessoa, "nomeUsuario"
+        PessoaRecord record;
+        record.removido = NAO_REMOVIDO_CHAR;
+        record.nomePessoa = NULL;
+        record.nomeUsuario = NULL;
+        char *rest = linha_copia;
+
+        // Extrai campos usando novo_strtok para preservar campos vazios
+        
+        // idPessoa (int)
+        token = novo_strtok(rest, ", ", &rest);
+        record.idPessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        
+        // nomePessoa (string variável)
+        char nomePessoa_buffer[256];
+        token = novo_strtok(NULL, ", ", &rest);
+        if (token != NULL && strcmp(token, "NULO") != 0) {
+            strcpy(nomePessoa_buffer, token);
+            record.nomePessoa = trim(nomePessoa_buffer); // Remove espaços/quebras de linha
+            record.tamanhoNomePessoa = strlen(record.nomePessoa);
+        } else {
+            record.nomePessoa = NULL;
+            record.tamanhoNomePessoa = 0;
+        }
+
+        // idadePessoa (int)
+        token = novo_strtok(NULL, ", ", &rest);
+        record.idadePessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+
+        // nomeUsuario (string variável)
+        char nomeUsuario_buffer[256];
+        token = novo_strtok(NULL, " ", &rest);
+        if (token != NULL && token[0] != '\0' && strcmp(token, "NULO") != 0) {
+            strcpy(nomeUsuario_buffer, token);
+            record.nomeUsuario = trim(nomeUsuario_buffer); // Remove espaços/quebras de linha
+            record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
+        } else {
+            record.nomeUsuario = NULL;
+            record.tamanhoNomeUsuario = 0;
+        }
+        
+        // Calcular tamanho do registro (fixo + variável)
+        // 4 * sizeof(int) = idPessoa + idadePessoa + tamanhoNomePessoa + tamanhoNomeUsuario
+        record.tamanhoRegistro = 4*sizeof(int);
+        if (record.nomePessoa != NULL && record.tamanhoNomePessoa != 0) record.tamanhoRegistro += record.tamanhoNomePessoa;
+        if (record.nomeUsuario != NULL && record.tamanhoNomeUsuario != 0) record.tamanhoRegistro += record.tamanhoNomeUsuario;
+        
+        // 5. Escrever registro no arquivo pessoa.bin
+        long int atual_byte_offset = ftell(pessoa_bin_file); // Byte offset de início do registro
+        fseek(pessoa_bin_file, 0, SEEK_END);
+
+        // Cabeçalho do registro (removido + tamanhoRegistro)
+        fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
+        fwrite(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
+
+        // Campos fixos
+        fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
+        fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
+
+        // Campos variáveis (tamanho + dado)
+        fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+        if (record.nomePessoa != NULL && record.nomePessoa[0] != '\0') fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
+
+        fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+        if (record.nomeUsuario != NULL && record.nomeUsuario[0] != '\0') fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        
+        // 6. Atualizar contagem do cabeçalho do arquivo pessoa.bin
+        pessoa_header.quantidadePessoas++;
+        
+        // 7. Inserir na arvore AVL para o índice
+        IndexRecord index_record;
+        index_record.idPessoa = record.idPessoa;
+        index_record.byteOffset = atual_byte_offset;
+        atualizaAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
+        
+        // 8. Liberar memória alocada
+        if (record.nomePessoa != NULL) free(record.nomePessoa);
+        if (record.nomeUsuario != NULL) free(record.nomeUsuario);
+
+        numInseridos++;
+    }
+
+    // 9. Atualizar o cabeçalho do arquivo pessoa
+    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
+    fclose(pessoa_bin_file);
+
+    // 10. Reescrever o arquivo de índice
+    indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
+    if (indice_bin_file == NULL) return;
+
+    IndexHeader indice_header;
+    if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+
+    fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+    printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+    statusIndice(indice_bin_file, &indice_header, '1');
+    fclose(indice_bin_file);
+
+    // 11. Liberar memória
+    liberarAVL(arvoreIndice->raiz);
+    free(arvoreIndice);
+
+    binarioNaTela(arquivoEntradaBin);
+    binarioNaTela(arquivoIndicePrimarioBin);
+}
+
+/*
+Funcionalidade 7: Atualização de Registros existentes do arquivo pessoa.bin com busca do campo a ser alterado
+Busca do registro com referência ao campo, tratando o reaproveitamento de espaço da modificação dos registros
+*/
 
 
 // ===============================================================================
@@ -366,10 +647,12 @@ int main() {
 
         case 5:
         // Argumentos: 5 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        deletarRegistros(argv[1] , argv[2], atoi(argv[3]));
         break;
 
         case 6:
         // Argumentos: 6 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        inserirRegistros(argv[1], argv[2], atoi(argv[3]));
         break;
 
         case 7:

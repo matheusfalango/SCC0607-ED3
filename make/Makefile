@@ -4,9 +4,9 @@ CFLAGS = -Wall -Wextra -Iinclude -std=c99
 
 # Arquivos
 TARGET = programaTrab
-SRCS = programaTrab.c utilidades.c ArvAVL.c
-OBJS = programaTrab.o utilidades.o ArvAVL.o
-HEADERS = ArvAVL.h programaTrab.h utilidades.h
+SRCS = $(wildcard *.c)
+OBJS = $(SRCS:.c=.o)
+HEADERS = $(wildcard *.h)
 
 # Regra padrão
 all: $(TARGET)

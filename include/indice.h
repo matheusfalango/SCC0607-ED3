@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "ArvAVL.h"
 
 // ===============================================================================
@@ -48,5 +49,9 @@ void statusIndice(FILE *indice_bin_file, IndexHeader *index_header, char status)
 //Implementação de escreveIndiceArvore: Carrega o arquivo de índice na arvore AVL em memória
 //Lê o arquivo de índice binário e carrega os registros na árvore AVL em memória.
 void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice);
+
+//Implementação de verificaStatusIndice: Verifica o Status de Consistência do Arquivo
+//Verifica o status do arquivo de indice.
+bool verificaStatusIndice(FILE *indice_bin_file, IndexHeader *indice_header);
 
 #endif

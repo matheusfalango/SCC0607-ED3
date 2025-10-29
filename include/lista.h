@@ -12,6 +12,7 @@
 // ===============================================================================
 
 #define NAO_REMOVIDO_CHAR '0'
+#define REMOVIDO_CHAR '1'
 
 typedef struct No {
     PessoaRecord *record; // Registro de pessoa
@@ -44,8 +45,13 @@ void liberarLista(Lista *lista);
 // Imprime todos os registros de pessoa armazenados na lista.
 void imprimirLista(Lista *lista);
 
+//Implementação de deletarPessoaDaLista: Remove os Registros da Lista
+//Remove os registros de pessoa da lista.
+void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista);
+
 //Implementação de buscaPessoa: Busca Generalizada Para Encontrar um Registro Específico
 //Busca um registro de pessoa de acordo com o campo e o valor definido.
 Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *valor_final);
+
 
 #endif
