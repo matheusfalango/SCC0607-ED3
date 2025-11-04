@@ -13,7 +13,7 @@ Função de wrapper para inserir um nó na Árvore AVL.
 @param id: ID do registro a ser inserido (chave primária).
 @param bOffset: Byte Offset do registro no arquivo de dados.
 */
-void atualizaAVL(ARV* arv, int id, long int bOffset) {
+void insereNoAVL(ARV* arv, int id, long int bOffset) {
 		insereNo(arv, id, bOffset);
 }
 
@@ -28,6 +28,28 @@ void removeNoAVL(ARV* arv, int id) {
 
 }
 
+
+/*
+Função para atualizar um nó da Árvore AVL.
+@param arv: Ponteiro para a Árvore AVL.
+@param id: ID do registro a ser atualizado (chave primária).
+@param offset: Novo Byte Offset do registro no arquivo de dados.
+*/
+void atualizarNo(ARV* arv, int idAntigo, int idAtual, long int offsetAtual) {
+		if(arv == NULL) return;
+
+		if(idAntigo != idAtual) {
+			removeNoAVL(arv, idAntigo);
+			insereNoAVL(arv, idAtual, offsetAtual);
+
+		} else {
+			NO* noEncontrado = buscarNo(arv, idAntigo);
+			if(noEncontrado != NULL) {
+				noEncontrado->bOffset = offsetAtual;
+			}
+
+		}
+}
 
 /*
 Função para percorrer a Árvore AVL em ordem crescente (inorder) e 

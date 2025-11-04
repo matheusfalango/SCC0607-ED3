@@ -84,7 +84,7 @@ void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice) {
             // Lê cada registro de índice e insere na AVL
             while (fread(&current_index_record.idPessoa, sizeof(int), 1, indice_bin_file) == 1) {
                 fread(&current_index_record.byteOffset, sizeof(long int), 1, indice_bin_file);
-                atualizaAVL(arvoreIndice, current_index_record.idPessoa, current_index_record.byteOffset);
+                insereNoAVL(arvoreIndice, current_index_record.idPessoa, current_index_record.byteOffset);
             }
         }
     }

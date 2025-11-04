@@ -95,6 +95,21 @@ void atualizaCabecPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header) {
 
 
 /*
+Implementação de atualizaCabecPessoa: Atualiza o Cabeçalho do Pessoa
+Atualiza o cabeçalho do arquivo de pessoa.
+@param pessoa_bin_file: O endereço do arquivo do pessoa.
+@param pessoa_header: A estrutura do cabeçalho do arquivo do pessoa.
+*/
+void lerCabecPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header) {
+    fseek(pessoa_bin_file, 0, SEEK_SET);
+    fread(&pessoa_header->status, sizeof(char), 1, pessoa_bin_file);
+    fread(&pessoa_header->quantidadePessoas, sizeof(int), 1, pessoa_bin_file);
+    fread(&pessoa_header->quantidadeRemovidos, sizeof(int), 1, pessoa_bin_file);
+    fread(&pessoa_header->proxByteOffset, sizeof(long int), 1, pessoa_bin_file);
+}
+
+
+/*
 Implementação de statusPessoa: Atualiza o Status do Arquivo Pessoa
 Atualiza o status do arquivo de pessoa
 @param pessoa_bin_file: O endereço do arquivo do pessoa.
@@ -107,6 +122,53 @@ void statusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header, char statu
     pessoa_header->status = status;
     fseek(pessoa_bin_file, 0, SEEK_SET);
     fwrite(&pessoa_header->status, sizeof(char), 1, pessoa_bin_file);
+}
+
+/*
+Implementação de escrevePessoaRecord: Escreve um Registro de Pessoa no Arquivo
+Escreve um registro de pessoa no arquivo binário.
+@param file: Ponteiro do arquivo de dados.
+@param record: Ponteiro do registro de dados a ser escrito.
+*/
+void escrevePessoaRecord(FILE *file, PessoaRecord *record) {
+    fwrite(&record->removido, sizeof(char), 1, file);
+    fwrite(&record->tamanhoRegistro, sizeof(int), 1, file);
+    fwrite(&record->idPessoa, sizeof(int), 1, file);
+    fwrite(&record->idadePessoa, sizeof(int), 1, file);
+    fwrite(&record->tamanhoNomePessoa, sizeof(int), 1, file);
+    if(record->tamanhoNomePessoa > 0) fwrite(record->nomePessoa, record->tamanhoNomePessoa, 1, file);
+    fwrite(&record->tamanhoNomeUsuario, sizeof(int), 1, file);
+    if(record->tamanhoNomeUsuario > 0) fwrite(record->nomeUsuario, record->tamanhoNomeUsuario, 1, file);
+}
+
+
+/*
+Implementação de copiarPessoaRecord: Copia um Registro de Pessoa
+Copia um registro de pessoa de uma estrutura para outra.
+@param origem: Ponteiro do registro de dados de origem.
+@param destino: Ponteiro do registro de dados de destino.
+*/
+void copiarPessoaRecord(PessoaRecord *destino, PessoaRecord *origem) {
+    destino->removido = origem->removido;
+    destino->tamanhoRegistro = origem->tamanhoRegistro;
+    destino->idPessoa = origem->idPessoa;
+    destino->idadePessoa = origem->idadePessoa;
+
+    destino->tamanhoNomePessoa = origem->tamanhoNomePessoa;
+    if (origem->tamanhoNomePessoa > 0) {
+        destino->nomePessoa = (char *) malloc(origem->tamanhoNomePessoa + 1);
+        strcpy(destino->nomePessoa, origem->nomePessoa);
+    } else {
+        destino->nomePessoa = NULL;
+    }
+
+    destino->tamanhoNomeUsuario = origem->tamanhoNomeUsuario;
+    if (origem->tamanhoNomeUsuario > 0) {
+        destino->nomeUsuario = (char *) malloc(origem->tamanhoNomeUsuario + 1);
+        strcpy(destino->nomeUsuario, origem->nomeUsuario);
+    } else {
+        destino->nomeUsuario = NULL;
+    }
 }
 
 
@@ -189,7 +251,8 @@ Define o offset atual no arquivo de índice em memória para um ID específico.
 */
 long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado) {
     NO* noEncontrado = buscarNo(indice_em_memoria, idProcurado);
-    return noEncontrado->bOffset;
+    if (noEncontrado == NULL) return -1;
+    else return noEncontrado->bOffset;
 }
 
 /*
@@ -205,7 +268,7 @@ int filtroCampoPessoa(PessoaRecord *pessoa_record, char *campo, char *valor_fina
     int match = 0;
     if (strcmp(campo, "idadePessoa") == 0) {
         int idadeProcurada = (strcmp(valor_final, "NULO") != 0) ? atoi(valor_final) : -1;
-        if (pessoa_record->idadePessoa != -1 && pessoa_record->idadePessoa == idadeProcurada) {
+        if (pessoa_record->idadePessoa == idadeProcurada) {
             match = 1;
         }
     } else if (strcmp(campo, "nomePessoa") == 0) {

@@ -13,6 +13,7 @@
 
 #define NAO_REMOVIDO_CHAR '0'
 #define REMOVIDO_CHAR '1'
+#define LIXO_CHAR '$'
 
 typedef struct No {
     PessoaRecord *record; // Registro de pessoa
@@ -48,6 +49,10 @@ void imprimirLista(Lista *lista);
 //Implementação de deletarPessoaDaLista: Remove os Registros da Lista
 //Remove os registros de pessoa da lista.
 void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista);
+
+//Implementação de atualizaPessoa: Atualiza os Registros da Lista
+//Atualiza os registros de pessoa da lista.
+int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char *campo2, char *valor2);
 
 //Implementação de buscaPessoa: Busca Generalizada Para Encontrar um Registro Específico
 //Busca um registro de pessoa de acordo com o campo e o valor definido.

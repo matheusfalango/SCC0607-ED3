@@ -139,7 +139,7 @@ void processarCSV(char *arquivoEntradaCSV, char *arquivoSaidaBin, char *arquivoI
         IndexRecord index_record;
         index_record.idPessoa = record.idPessoa;
         index_record.byteOffset = atual_byte_offset;
-        atualizaAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
+        insereNoAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
 
         // 8. Liberar memória alocada
         if (record.nomePessoa != NULL) free(record.nomePessoa);
@@ -307,7 +307,7 @@ Seguindo a busca de registro de dados geral, encontra-se o registro e remove-o l
 void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdDelete) {
     FILE *pessoa_bin_file = abrirPessoa(arquivoEntradaBin ,"r+b"); // ler e escrever no novo arquivo
     if(pessoa_bin_file == NULL) return;
-
+    
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
     if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
@@ -316,12 +316,13 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     ARV* arvoreIndice = criarAVL();
     FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb"); // leitura
     if (indice_bin_file == NULL) return;
-
+    
     escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
     fclose(indice_bin_file);
 
     // 3. Processa as buscas para deletar logicamente
     int numDeletados = 1;
+    Lista *lista_registros;
     while (numDeletados <= qtdDelete) {
         char linha[256];
         
@@ -381,14 +382,15 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 
         // 4. Executa a busca dos registros
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
-        Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        
         if(lista_registros->tamanho > 0) {
             // 5. Deleta os registros da lista
             statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // inconsistente para deletar registros logicamente
             deletarPessoaDaLista(pessoa_bin_file, arvoreIndice, lista_registros);
 
             // 6. Abertura do arquivo índice para reescrita
-            FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "wb"); // escrita em um novo arquivo limpo
+            indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "wb"); // escrita em um novo arquivo limpo
             if (indice_bin_file == NULL) return;
 
             IndexHeader index_header;
@@ -401,18 +403,15 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
             statusIndice(indice_bin_file, &index_header, '1');
             fclose(indice_bin_file);
 
-            // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
-            pessoa_header.quantidadeRemovidos += lista_registros->tamanho;
-            atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
-
-        } else if (lista_registros->tamanho == 0) {
-            // se a lista não tiver nenhum registro encontrado
-            printf("Registro inexistente.\n\n");
         }
 
         liberarLista(lista_registros); // liberar memória
         numDeletados++; // atualiza contagem de buscas
     }
+
+    // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
+    pessoa_header.quantidadeRemovidos = lista_registros->tamanho;
+    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 9. Libera memória
     liberarAVL(arvoreIndice->raiz);
@@ -546,7 +545,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         IndexRecord index_record;
         index_record.idPessoa = record.idPessoa;
         index_record.byteOffset = atual_byte_offset;
-        atualizaAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
+        insereNoAVL(arvoreIndice, index_record.idPessoa, index_record.byteOffset);
         
         // 8. Liberar memória alocada
         if (record.nomePessoa != NULL) free(record.nomePessoa);
@@ -582,7 +581,163 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 /*
 Funcionalidade 7: Atualização de Registros existentes do arquivo pessoa.bin com busca do campo a ser alterado
 Busca do registro com referência ao campo, tratando o reaproveitamento de espaço da modificação dos registros
+@param arquivoEntradaBin: Nome do arquivo binário de dados (pessoa.bin).
+@param arquivoIndicePrimarioBin: Nome do arquivo binário de índice (indexaPessoa.bin).
+@param qtdBusca: Número de buscas a serem realizadas.
 */
+void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, int qtdBusca) {
+    FILE *pessoa_bin_file = abrirPessoa(arquivoEntradaBin ,"r+b"); // ler no novo arquivo
+    if(pessoa_bin_file == NULL) return;
+
+    // 1. Verifica consistência do arquivo de dados
+    PessoaHeader pessoa_header;
+    lerCabecPessoa(pessoa_bin_file, &pessoa_header);
+    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // garantir que durante escrita, o arq esteja inconsistente
+
+    // 2. Carrega o índice para a Árvore AVL em memória
+    ARV* arvoreIndice = criarAVL();
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb");
+    if (indice_bin_file == NULL) return;
+
+    escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
+    fclose(indice_bin_file);
+
+    // 3. Processa as buscas
+    int numBusca = 1;
+    while (numBusca <= qtdBusca) {
+        char linha[256];
+        
+        // Lê a linha de comando de busca
+        memset(linha, 0, sizeof(linha));
+        if (fgets(linha, sizeof(linha), stdin) == NULL) break;
+        linha[strcspn(linha, "\r\n")] = '\0'; // Remove \n e \r
+        if (strlen(linha) == 0) continue; // Pula linhas vazias
+
+        // Prepara a linha para tokenização (ex: "1 campo1=valor1 campo2=valor2")
+        char linha_copia[256];
+        strcpy(linha_copia, linha);
+
+        char *token = strtok(linha_copia, " ");
+        if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        token = strtok(NULL, " "); // Pula o número da busca
+        if (token == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Processa campo1=valor1
+        char campo1[50];
+        char valor1[200];
+
+        char *igual_pos = strchr(token, '=');
+        if (igual_pos == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Extrai 'campo1'
+        int campo_len = igual_pos - token;
+        strncpy(campo1, token, campo_len);
+        campo1[campo_len] = '\0';
+
+        // Extrai 'valor1'
+        strcpy(valor1, igual_pos + 1);
+
+        token = strtok(NULL, " "); // Leitura dos outroa valores p atualização
+        if (token == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Processa campo2=valor2
+        char campo2[50];
+        char valor2[200];
+
+        igual_pos = strchr(token, '=');
+        if (igual_pos == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Extrai 'campo2'
+        campo_len = igual_pos - token;
+        strncpy(campo2, token, campo_len);
+        campo2[campo_len] = '\0';
+
+        // Extrai 'valor2'
+        strcpy(valor2, igual_pos + 1);
+
+        // Trata valores com espaços (se houver mais tokens)
+        char *resto = strtok(NULL, "");
+        if (resto != NULL && strlen(resto) > 0) {
+            strcat(valor2, " ");
+            strcat(valor2, resto);
+        }
+
+        // Limpa o valor (remove aspas e espaços extras)
+        char valor1_final[200], valor2_final[200];
+        scan_string_aspas(valor1_final, valor1);
+        scan_string_aspas(valor2_final, valor2);
+
+        // 4. Executa a busca
+        fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
+        Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo1, valor1_final);
+        
+        if(lista_registros->tamanho > 0) {
+            // atualizar os registros encontrados na arvore
+            pessoa_header.quantidadeRemovidos += atualizaPessoa(pessoa_bin_file, arvoreIndice, lista_registros, campo2, valor2_final);
+            
+            // Reescrever o indice
+            indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
+            if (indice_bin_file == NULL) return;
+
+            IndexHeader indice_header;
+            if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+
+            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+            printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+
+            statusIndice(indice_bin_file, &indice_header, '1');
+            fclose(indice_bin_file);
+        }
+
+        // Atualizar contagem
+        liberarLista(lista_registros); // liberar memória
+        numBusca++; // atualiza contagem de buscas
+    }
+
+    // 5. Atualiza cabeçalho
+    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
+
+    // 6. Libera memória
+    liberarAVL(arvoreIndice->raiz);
+    free(arvoreIndice);
+    fclose(pessoa_bin_file);
+
+    binarioNaTela(arquivoEntradaBin);
+    binarioNaTela(arquivoIndicePrimarioBin);
+}
+
+
+/*
+Funcionalidade 8: Criação de Arquivo Binário Segue
+Cria o arquivo de segue binário com o cabeçalho inicializado e com o processamento do CSV
+@param arquivoEntradaCSV: Nome do arquivo CSV de entrada.
+@param arquivoSaidaBin: Nome do arquivo binário de segue a ser criado.
+*/
+/*void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
+
+}*/
 
 
 // ===============================================================================
@@ -657,6 +812,7 @@ int main() {
 
         case 7:
         // Argumentos: 7 [arquivo_dados_bin] [arquivo_indice_bin] [qtd_buscas]
+        atualizarRegistros(argv[1], argv[2], atoi(argv[3]));
         break;
 
         case 8:

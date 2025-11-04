@@ -1,6 +1,6 @@
 # Compilador e flags
 CC = gcc
-CFLAGS = -Wall -Wextra -Iinclude -std=c99
+CFLAGS = -Wall -Wextra -Iinclude -std=c99 -ggdb
 
 # Diretórios
 APP_DIR = apps
@@ -58,5 +58,8 @@ zip:
 # Executa o programa
 run: $(TARGET)
 	./$(TARGET)
+
+gdb: $(TARGET)
+	gdb $(TARGET)
 
 .PHONY: all clean run zip
