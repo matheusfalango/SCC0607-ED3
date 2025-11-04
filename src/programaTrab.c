@@ -746,7 +746,84 @@ Cria o arquivo de segue binário com o cabeçalho inicializado e com o processam
 @param arquivoEntradaCSV: Nome do arquivo CSV de entrada.
 @param arquivoSaidaBin: Nome do arquivo binário de segue a ser criado.
 */
-/*void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
+void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
+    // 1. Criar arquivo segue, inicializar cabeçalho do arquivo e abrir arquivo csv para leitura
+    FILE *csv_file = fopen(arquivoEntradaCSV, "r");
+    if (csv_file == NULL) {
+        printf("Falha no processamento do arquivo.\n");
+        return;
+    }
 
-}*/
+    FILE *segue_bin_file = abrirIndice(arquivoSaidaBin, "wb");
+    if (segue_bin_file == NULL) return;
+
+    SegueHeader segue_header;
+    initCabecSegue(segue_bin_file, &segue_header); // Função para inicializar cabeçalho no arquivo
+
+    // 2. Atualizar status do cabeçalho do arquivo segue para '0' (inconsistente)
+    statusSegue(segue_bin_file, &segue_header, '0');    
+
+    char line[1024];
+    // Ignorar a primeira linha (cabeçalho do CSV)
+    fgets(line, sizeof(line), csv_file);
+
+    // 4. Processamento de cada linha do CSV
+    while (fgets(line, sizeof(line), csv_file) != NULL) {
+        SegueRecord record;
+        record.removido = NAO_REMOVIDO_CHAR;
+
+        char *token;
+        char *rest = line;
+
+        // Extrai campos usando novo_strtok para preservar campos vazios
+        
+        // idPessoaQueSegue (int)
+        token = novo_strtok(rest, ",", &rest);
+        record.idPessoaQueSegue = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+        
+        // idPessoaQueESeguida(int)
+        token = novo_strtok(rest, ",", &rest);
+        record.idPessoaQueESeguida = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+
+        // dataInicioQueSegue (string fixa)
+        char dataInicioQueSegue_buffer[10];
+        for(int i = 0; i < 10; i++) dataInicioQueSegue_buffer[i] = LIXO_CHAR;
+        token = novo_strtok(NULL, ",", &rest);
+        if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
+            strcpy(dataInicioQueSegue_buffer, token);
+        }
+
+        // dataFimQueSegue (string fixa)
+        char dataFimQueSegue_buffer[10];
+        for(int i = 0; i < 10; i++) dataFimQueSegue_buffer[i] = LIXO_CHAR;
+        token = novo_strtok(NULL, ",", &rest);
+        if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
+            strcpy(dataFimQueSegue_buffer, token);
+        }
+
+        // grauAmizade (char)
+        token = novo_strtok(NULL, ",", &rest);
+        record.grauAmizade = (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) ? token[0] : LIXO_CHAR;
+
+        // 5. Atualizar contagem do cabeçalho
+        segue_header.quantidadePessoas++;
+
+        // 6. Escrever registro no arquivo segue.bin
+        fseek(segue_bin_file, 0, SEEK_END);
+        escreveSegueRecord(segue_bin_file, &record);
+
+    }
+
+    // 10. Atualizar cabeçalho final do arquivo pessoa.bin (dados)
+    atualizaCabecSegue(segue_bin_file, &segue_header);
+
+    // 11. Atualizar cabeçalho final do arquivo de índice
+    statusSegue(segue_bin_file, &segue_header, '1');
+
+    // . Fechar arquivos e liberar memória
+    fclose(csv_file);
+    fclose(segue_bin_file);
+
+    binarioNaTela(arquivoSaidaBin); // Função de debug
+}
 

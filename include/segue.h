@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define NAO_REMOVIDO_CHAR '0'
+#define REMOVIDO_CHAR '1'
+
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO SEGUE
 // ===============================================================================
@@ -36,5 +39,24 @@ typedef struct {
 // UTILIDADES PARA AS FUNCIONALIDADES - ARQUIVO SEGUE
 // ===============================================================================
 
+//Implementação da abrirSegue: Abertura de Arquivo de Segue
+//Abre o arquivo segue de acordo com o modo de abertura desejado.
+FILE *abrirSegue(char *nomeArquivoSegue, char *modo);
+
+//Implementação de initCabecSegue: Inicializar o Cabeçalho do Segue
+//Atualiza os valores iniciais para o arquivo segue
+void initCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header);
+
+//Implementação de statusSegue: Atualiza o Status do Segue
+//Atualiza o status do arquivo de Segue
+void statusSegue(FILE *segue_bin_file, SegueHeader *segue_header, char status);
+
+//Implementação de escreverSegue: Escreve no Arquivo um Registro do Arquivo Segue.
+//Insere um registro no arquivo segue.
+void escreveSegueRecord(FILE *segue_bin_file, SegueRecord *record);
+
+//Implementação de atualizaCabecSegue: Atualiza o Cabeçalho do Segue
+//Atualiza o cabeçalho do arquivo de segue.
+void atualizaCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header);
 
 #endif

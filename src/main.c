@@ -80,6 +80,7 @@ int main() {
 
         case 8:
         // Argumentos: 8 [arquivo_csv] [arquivo_segue_bin]
+        criarArquivoSegueBinario(argv[1], argv[2]);
         break;
 
         case 9:

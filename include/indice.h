@@ -10,6 +10,9 @@
 #include <stdbool.h>
 #include "ArvAVL.h"
 
+#define NAO_REMOVIDO_CHAR '0'
+#define REMOVIDO_CHAR '1'
+
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO INDICE
 // ===============================================================================
@@ -37,7 +40,13 @@ typedef struct {
 //Implementação da abrirIndice: Abertura de Arquivo de Índice Primário
 //Abre o arquivo indice de acordo com o modo de abertura desejado.
 FILE *abrirIndice(char *nomeArquivoIndice, char *modo);
+//Implementação da abrirIndice: Abertura de Arquivo de Índice Primário
+//Abre o arquivo indice de acordo com o modo de abertura desejado.
+FILE *abrirIndice(char *nomeArquivoIndice, char *modo);
 
+//Implementação de initCabecIndice: Inicializar o Cabeçalho do Índice Primário
+//Atualiza os valores iniciais para o arquivo de índice primário
+void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header);
 //Implementação de initCabecIndice: Inicializar o Cabeçalho do Índice Primário
 //Atualiza os valores iniciais para o arquivo de índice primário
 void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header);
