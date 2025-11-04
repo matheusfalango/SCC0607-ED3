@@ -329,7 +329,7 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
 
 	} else if (campo != NULL && valor_final != NULL && arvoreIndice != NULL) {
         if(strcmp(campo, "idPessoa") == 0) {
-            // Busca no indice gravado em memória
+            // Busca no indice gravado em memória - busca binaria que percorre a arvore
             long int offset = setProcuradoOffset(arvoreIndice, atoi(valor_final));
 
             if (offset != -1) {
@@ -352,6 +352,7 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
             
     	        if(temp->removido == NAO_REMOVIDO_CHAR && filtroCampoPessoa(temp, campo, valor_final)){ // se os parametros foram encontrados no registro, add na lista					
     				addLista(lista, temp);
+                    if (strcmp(campo, "nomeUsuario") == 0 || strcmp(campo, "nomePessoa") == 0) break; // sao unicos
              	}
             }
         }

@@ -109,3 +109,18 @@ bool verificaStatusIndice(FILE *indice_bin_file, IndexHeader *indice_header) {
 
     return 1;
 }
+
+
+/*
+Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
+Define o offset atual no arquivo de índice em memória para um ID específico.
+@param indice_em_memoria: Registros de índice em memória.
+@param idProcurado: Valor inteiro do id da pessoa procurada.
+@return: Valor do byte offset referente ao id da pessoa.
+*/
+long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado) {
+    NO* noEncontrado = buscarNo(indice_em_memoria, idProcurado);
+    if (noEncontrado == NULL) return -1;
+    else return noEncontrado->bOffset;
+}
+

@@ -54,4 +54,8 @@ void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice);
 //Verifica o status do arquivo de indice.
 bool verificaStatusIndice(FILE *indice_bin_file, IndexHeader *indice_header);
 
+//Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
+//Define o offset atual no arquivo de índice para um ID específico.
+long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado);
+
 #endif

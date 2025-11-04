@@ -243,19 +243,6 @@ PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file) {
 
 
 /*
-Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
-Define o offset atual no arquivo de índice em memória para um ID específico.
-@param indice_em_memoria: Registros de índice em memória.
-@param idProcurado: Valor inteiro do id da pessoa procurada.
-@return: Valor do byte offset referente ao id da pessoa.
-*/
-long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado) {
-    NO* noEncontrado = buscarNo(indice_em_memoria, idProcurado);
-    if (noEncontrado == NULL) return -1;
-    else return noEncontrado->bOffset;
-}
-
-/*
 Implementação de filtroCampoPessoa: Filtra um Registro de Pessoa com Base em um Campo e Valor
 Filtra um registro de pessoa com base em um campo específico e um valor fornecido.
 @param pessoa_record:

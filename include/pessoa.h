@@ -84,10 +84,6 @@ bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);
 //Lê um registro de pessoa do arquivo binário.
 PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file);
 
-//Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
-//Define o offset atual no arquivo de índice para um ID específico.
-long int setProcuradoOffset(ARV *indice_em_memoria, int idProcurado);
-
 //Implementação de filtroCampoPessoa: Filtra um Registro de Pessoa com Base em um Campo e Valor
 //Filtra um registro de pessoa com base em um campo específico e um valor fornecido.
 int filtroCampoPessoa(PessoaRecord *pessoa_record, char *campo, char *valor_final);
