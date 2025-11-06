@@ -7,9 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define NAO_REMOVIDO_CHAR '0'
-#define REMOVIDO_CHAR '1'
+#include "constantes.h"
 
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO SEGUE
@@ -23,6 +21,8 @@ typedef struct {
     int quantidadePessoas; // Número total de pessoas que seguem outras pessoas presentes no arquivo
     int proxRRN; // Armazena o valor do proximo byte offset disponivel
 } SegueHeader;
+
+#define SEGUE_RECORD_SIZE 30 // Tamanho fixo do registro de segue (campos fixos)
 
 // Estrutura do registro de dados do segue (segue.bin)
 typedef struct {

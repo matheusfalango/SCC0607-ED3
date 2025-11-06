@@ -20,9 +20,7 @@ Biblioteca que possui todas as definições necessárias para o arquivo principa
 // DEFINIÇÕES - GERAIS
 // ===============================================================================
 
-#define REMOVIDO_CHAR '1' // Caractere que indica que o registro foi removido
-#define NAO_REMOVIDO_CHAR '0' // Caractere que indica que o registro NÃO foi removido
-#define LIXO_CHAR '$' // Caractere de preenchimento de lixo
+#include "constantes.h"
 
 
 #endif

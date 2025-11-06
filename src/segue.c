@@ -31,7 +31,7 @@ void initCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header) {
     fseek(segue_bin_file, 0 ,SEEK_SET);
     fwrite(&segue_header->status, sizeof(char), 1, segue_bin_file);
     fwrite(&segue_header->quantidadePessoas, sizeof(int), 1, segue_bin_file);
-    fwrite(&segue_header->proxRRN, sizeof(long int), 1, segue_bin_file);
+    fwrite(&segue_header->proxRRN, sizeof(int), 1, segue_bin_file);
 
     segue_header->status = '1'; // Status '1': Consistente (escrita finalizada)
     fseek(segue_bin_file, 0, SEEK_SET);
@@ -77,11 +77,11 @@ Atualiza o cabeçalho do arquivo de segue.
 @param segue_header: A estrutura do cabeçalho do arquivo do segue.
 */
 void atualizaCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header) {
-    fseek(segue_bin_file, 0, SEEK_END);
-    segue_header->proxRRN = ftell(segue_bin_file); // Tamanho total do arquivo
     fseek(segue_bin_file, 0, SEEK_SET);
     segue_header->status = '1'; // Consistente
+    segue_header->proxRRN = segue_header->quantidadePessoas; // RRN para calculo do offset disponivel
     fwrite(&segue_header->status, sizeof(char), 1, segue_bin_file);
     fwrite(&segue_header->quantidadePessoas, sizeof(int), 1, segue_bin_file);
-    fwrite(&segue_header->proxRRN, sizeof(long int), 1, segue_bin_file);
+    fwrite(&segue_header->proxRRN, sizeof(int), 1, segue_bin_file);
 }
+

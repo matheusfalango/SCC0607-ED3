@@ -9,9 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "manipularAVL.h"
-
-#define NAO_REMOVIDO_CHAR '0'
-#define REMOVIDO_CHAR '1'
+#include "constantes.h"
 
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO PESSOA

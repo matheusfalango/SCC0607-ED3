@@ -768,9 +768,12 @@ void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
     fgets(line, sizeof(line), csv_file);
 
     // 4. Processamento de cada linha do CSV
+    fseek(segue_bin_file, SEGUE_HEADER_SIZE, SEEK_SET);
     while (fgets(line, sizeof(line), csv_file) != NULL) {
-        SegueRecord record;
-        record.removido = NAO_REMOVIDO_CHAR;
+        line[strcspn(line, "\r\n")]= '\0';
+
+        SegueRecord segue_record;
+        segue_record.removido = NAO_REMOVIDO_CHAR;
 
         char *token;
         char *rest = line;
@@ -779,38 +782,39 @@ void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
         
         // idPessoaQueSegue (int)
         token = novo_strtok(rest, ",", &rest);
-        record.idPessoaQueSegue = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+        segue_record.idPessoaQueSegue = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
         
         // idPessoaQueESeguida(int)
         token = novo_strtok(rest, ",", &rest);
-        record.idPessoaQueESeguida = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+        segue_record.idPessoaQueESeguida = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
 
         // dataInicioQueSegue (string fixa)
         char dataInicioQueSegue_buffer[10];
         for(int i = 0; i < 10; i++) dataInicioQueSegue_buffer[i] = LIXO_CHAR;
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
-            strcpy(dataInicioQueSegue_buffer, token);
+            strncpy(dataInicioQueSegue_buffer, token, 10);
         }
+        memcpy(segue_record.dataInicioQueSegue, dataInicioQueSegue_buffer, 10*sizeof(char));
 
         // dataFimQueSegue (string fixa)
         char dataFimQueSegue_buffer[10];
         for(int i = 0; i < 10; i++) dataFimQueSegue_buffer[i] = LIXO_CHAR;
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
-            strcpy(dataFimQueSegue_buffer, token);
+            strncpy(dataFimQueSegue_buffer, token, 10);
         }
+        memcpy(segue_record.dataFimQueSegue, dataFimQueSegue_buffer, 10*sizeof(char));
 
         // grauAmizade (char)
         token = novo_strtok(NULL, ",", &rest);
-        record.grauAmizade = (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) ? token[0] : LIXO_CHAR;
+        segue_record.grauAmizade = (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) ? token[0] : LIXO_CHAR;
 
         // 5. Atualizar contagem do cabeçalho
         segue_header.quantidadePessoas++;
 
         // 6. Escrever registro no arquivo segue.bin
-        fseek(segue_bin_file, 0, SEEK_END);
-        escreveSegueRecord(segue_bin_file, &record);
+        escreveSegueRecord(segue_bin_file, &segue_record);
 
     }
 

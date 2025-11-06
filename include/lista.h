@@ -6,15 +6,13 @@
 
 #include "pessoa.h"
 #include "indice.h"
+#include "constantes.h"
 
 
 // ===============================================================================
 // DEFINIÇÕES PARA LISTA DE REGISTROS DE PESSOAS
 // ===============================================================================
 
-#define NAO_REMOVIDO_CHAR '0'
-#define REMOVIDO_CHAR '1'
-#define LIXO_CHAR '$'
 
 typedef struct No {
     PessoaRecord *record; // Registro de pessoa
