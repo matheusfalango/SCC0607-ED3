@@ -85,6 +85,7 @@ int main() {
 
         case 9:
         // Argumentos: 9 [arquivo_segue_bin] [arquivo_segue_ordenado_bin]
+        ordenarArquivoSegue(argv[1], argv[2]);
         break;
 
         case 10:

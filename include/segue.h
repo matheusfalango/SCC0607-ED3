@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include "constantes.h"
 
 // ===============================================================================
@@ -22,15 +23,15 @@ typedef struct {
     int proxRRN; // Armazena o valor do proximo byte offset disponivel
 } SegueHeader;
 
-#define SEGUE_RECORD_SIZE 30 // Tamanho fixo do registro de segue (campos fixos)
+#define SEGUE_RECORD_SIZE 32 // Tamanho fixo do registro de segue (campos fixos)
 
 // Estrutura do registro de dados do segue (segue.bin)
 typedef struct {
     char removido; // '0' não removido, '1' removido
     int idPessoaQueSegue; // identifica o idPessoa que esta seguindo
     int idPessoaQueESeguida; // identifica o idPessoa que é seguida por outra pessoa
-    char dataInicioQueSegue[10]; // data de inicio que o id segue começou a seguir a id seguida
-    char dataFimQueSegue[10]; // data de fim que o id segue terminou de seguir a id seguida
+    char dataInicioQueSegue[11]; // data de inicio que o id segue começou a seguir a id seguida
+    char dataFimQueSegue[11]; // data de fim que o id segue terminou de seguir a id seguida
     char grauAmizade; // segue uma pessoa porque é; '0' celebridade, '1' amiga da minha amiga, '2' amiga
 } SegueRecord;
 
@@ -58,5 +59,26 @@ void escreveSegueRecord(FILE *segue_bin_file, SegueRecord *record);
 //Implementação de atualizaCabecSegue: Atualiza o Cabeçalho do Segue
 //Atualiza o cabeçalho do arquivo de segue.
 void atualizaCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header);
+
+//Implementação de atualizaCabecPessoa: Atualiza o Cabeçalho do Pessoa
+//Atualiza o cabeçalho do arquivo de pessoa.
+void lerCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header);
+
+//Implementação de copiaCabecSegue: Copia o Cabeçalho do Segue Desordenado para o Ordenado
+//Escreve o cabeçalho do arquivo segue ordenado com os dados do arquivo segue desordenado
+void copiaCabecSegue(FILE *segue_bin_file, SegueHeader *ordenado_header, SegueHeader *desordenado_header);
+
+//Implementação de lerSegueEmVetor: Lê um registro do arquivo segue para a memória
+//Leitura de um registro do arquivo segue para a memória em vetor
+void lerSegueEmVetor(FILE *segue_bin_file, SegueRecord *segue_record, int qtdPessoas);
+
+//Implementação de escreveVetorEmSegue: Escreve um vetor de registros no arquivo segue
+//Escrita de um vetor de registros no arquivo segue
+void escreveVetorEmSegue(FILE *segue_bin_file, SegueRecord *segue_record, int qtdPessoas);
+
+
+//Implementação de verificaStatusSegue: Verifica o Status de Consistência do Arquivo
+//Verifica o status do arquivo de segue.
+bool verificaStatusSegue(FILE *segue_bin_file, SegueHeader *segue_header);
 
 #endif

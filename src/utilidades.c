@@ -83,3 +83,65 @@ void scan_quote_string(char *str) {
 // FUNCIONALIDADES COMPLEMENTARES DESENVOLVIDAS
 // ===============================================================================
 
+/*
+Implementação de compare: Função de comparação para qsort
+Usada para ordenar arrays de struct SegueRecord.
+@param a: Ponteiro para o primeiro registro a ser comparado.
+@param b: Ponteiro para o segundo registro a ser comparado.
+@return: Valor negativo se a < b, positivo se a > b, zero se iguais.
+*/
+int compare(const void *a, const void *b) {
+	// Inicializar os registros a serem comparados
+	SegueRecord *valA = (SegueRecord *) a;
+	SegueRecord *valB = (SegueRecord *) b;
+
+	// Verificar valores de valA e valB por idPessoaQueSegue
+	if (valA->idPessoaQueSegue == valB->idPessoaQueSegue) {
+
+		// Desempate por idPessoaQueESeguida
+		if (valA->idPessoaQueESeguida == valB->idPessoaQueESeguida) {
+
+			// Desempate por dataInicioQueSegue
+			int valA_dataInicioQueSegue_int = data_to_int(valA->dataInicioQueSegue);
+			int valB_dataInicioQueSegue_int = data_to_int(valB->dataInicioQueSegue);
+
+			if(valA_dataInicioQueSegue_int == valB_dataInicioQueSegue_int) {
+
+				// Desempate por dataFimQueSegue
+				int valA_dataFimQueSegue_int  = data_to_int(valA->dataFimQueSegue);				
+				int valB_dataFimQueSegue_int  = data_to_int(valB->dataFimQueSegue);
+
+				// Ultimo desempate retorna a diferença
+				return valA_dataFimQueSegue_int - valB_dataFimQueSegue_int;
+
+			} else {
+				return valA_dataInicioQueSegue_int - valB_dataInicioQueSegue_int;
+			}
+			
+		} else {
+			return valA->idPessoaQueESeguida - valB->idPessoaQueESeguida;
+		}
+
+	} else {
+		return valA->idPessoaQueSegue - valB->idPessoaQueSegue;
+	}
+
+}
+
+
+/*
+Implementação de data_to_int: Função de conversão de data para int
+Converte uma data no formato "DD/MM/AAAA" para um inteiro do tipo YYYYMMDD.
+@param data: String contendo a data no formato "DD/MM/AAAA".
+@return: Inteiro representando a data no formato YYYYMMDD.
+*/
+int data_to_int(const char data[10]) {
+    int dia, mes, ano;
+	if(data == NULL) return -1;
+
+	// teste para ver se é lixo
+    if(strcmp(data, "$$$$$$$$$$") != 0) sscanf(data, "%4d/%2d/%2d", &dia, &mes, &ano);
+	else return -1;
+
+    return ano * 10000 + mes * 100 + dia;
+}

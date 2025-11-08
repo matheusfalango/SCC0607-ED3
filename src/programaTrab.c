@@ -532,7 +532,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         
         // 5. Escrever registro no arquivo pessoa.bin
         long int atual_byte_offset = ftell(pessoa_bin_file); // Byte offset de início do registro
-        fseek(pessoa_bin_file, 0, SEEK_END);
+        //fseek(pessoa_bin_file, 0, SEEK_END); removi para nao pular lixo desnecessario
 
         // Cabeçalho do registro (removido + tamanhoRegistro)
         fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
@@ -772,8 +772,8 @@ void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
     while (fgets(line, sizeof(line), csv_file) != NULL) {
         line[strcspn(line, "\r\n")]= '\0';
 
-        SegueRecord segue_record;
-        segue_record.removido = NAO_REMOVIDO_CHAR;
+        SegueRecord record;
+        record.removido = NAO_REMOVIDO_CHAR;
 
         char *token;
         char *rest = line;
@@ -782,52 +782,104 @@ void criarArquivoSegueBinario(char *arquivoEntradaCSV, char *arquivoSaidaBin) {
         
         // idPessoaQueSegue (int)
         token = novo_strtok(rest, ",", &rest);
-        segue_record.idPessoaQueSegue = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+        record.idPessoaQueSegue = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
         
         // idPessoaQueESeguida(int)
         token = novo_strtok(rest, ",", &rest);
-        segue_record.idPessoaQueESeguida = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
+        record.idPessoaQueESeguida = (token != NULL && token[0] != '\0') ? atoi(token) : -1;
 
         // dataInicioQueSegue (string fixa)
-        char dataInicioQueSegue_buffer[10];
+        char dataInicioQueSegue_buffer[11];
         for(int i = 0; i < 10; i++) dataInicioQueSegue_buffer[i] = LIXO_CHAR;
+        dataInicioQueSegue_buffer[10] = '\0';
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
-            strncpy(dataInicioQueSegue_buffer, token, 10);
+            strncpy(dataInicioQueSegue_buffer, token, 11);
         }
-        memcpy(segue_record.dataInicioQueSegue, dataInicioQueSegue_buffer, 10*sizeof(char));
+        memcpy(record.dataInicioQueSegue, dataInicioQueSegue_buffer, 11);
 
         // dataFimQueSegue (string fixa)
-        char dataFimQueSegue_buffer[10];
+        char dataFimQueSegue_buffer[11];
         for(int i = 0; i < 10; i++) dataFimQueSegue_buffer[i] = LIXO_CHAR;
+        dataFimQueSegue_buffer[10] = '\0';
         token = novo_strtok(NULL, ",", &rest);
         if (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) {
-            strncpy(dataFimQueSegue_buffer, token, 10);
+            strncpy(dataFimQueSegue_buffer, token, 11);
         }
-        memcpy(segue_record.dataFimQueSegue, dataFimQueSegue_buffer, 10*sizeof(char));
+        memcpy(record.dataFimQueSegue, dataFimQueSegue_buffer, 11);
 
         // grauAmizade (char)
         token = novo_strtok(NULL, ",", &rest);
-        segue_record.grauAmizade = (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) ? token[0] : LIXO_CHAR;
+        record.grauAmizade = (token != NULL && token[0] != '\0' && strcmp(token, "") != 0) ? token[0] : LIXO_CHAR;
 
         // 5. Atualizar contagem do cabeçalho
         segue_header.quantidadePessoas++;
 
         // 6. Escrever registro no arquivo segue.bin
-        escreveSegueRecord(segue_bin_file, &segue_record);
+        escreveSegueRecord(segue_bin_file, &record);
 
     }
 
-    // 10. Atualizar cabeçalho final do arquivo pessoa.bin (dados)
+    // 7. Atualizar cabeçalho final do arquivo pessoa.bin (dados)
     atualizaCabecSegue(segue_bin_file, &segue_header);
 
-    // 11. Atualizar cabeçalho final do arquivo de índice
+    // 8. Atualizar cabeçalho final do arquivo de índice
     statusSegue(segue_bin_file, &segue_header, '1');
 
-    // . Fechar arquivos e liberar memória
+    // 9. Fechar arquivos e liberar memória
     fclose(csv_file);
     fclose(segue_bin_file);
 
     binarioNaTela(arquivoSaidaBin); // Função de debug
 }
 
+
+/*
+Funcionalidade 9: Ordenar o Arquivo Segue de acordo com o campo idPessoaQueSegue de forma crescente
+Leitura do arquivo segue armazenado em RAM e ordenado de forma crescente seguindo os critérios;
+ao fim, criar um novo arquivo de dados segueOrdenado
+@param arquivoSegueDesordenado: Nome do arquivo binário de segue desordenado.
+@param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
+*/
+void ordenarArquivoSegue(char *arquivoSegueDesordenado, char *arquivoSegueOrdenado) {
+    // 1. Abrir arquivo segue e ler cabeçalho do arquivo
+    FILE *desordenado_bin_file = abrirSegue(arquivoSegueDesordenado, "rb");
+    if (desordenado_bin_file == NULL) return;
+
+    SegueHeader desordenado_header;
+    lerCabecSegue(desordenado_bin_file, &desordenado_header); // Função para ler cabeçalho no arquivo
+    if(verificaStatusSegue(desordenado_bin_file, &desordenado_header) == 0) return; // verifica status
+    
+    // 2. Criar arquivo segue novo para ordenar os registros
+    FILE *ordenado_bin_file = abrirSegue(arquivoSegueOrdenado, "wb");
+    if (ordenado_bin_file == NULL) return;
+
+    SegueHeader ordenado_header;
+    copiaCabecSegue(ordenado_bin_file, &ordenado_header, &desordenado_header);
+    statusSegue(ordenado_bin_file, &ordenado_header, '0'); // inconsistente para escrita
+
+    // 3. Criar vetor para guardar os registros lidos
+    SegueRecord segue_record[ordenado_header.quantidadePessoas];
+    lerSegueEmVetor(desordenado_bin_file, &segue_record[0], ordenado_header.quantidadePessoas);
+
+    // 4. Ordenar o vetor por QuickSort pela biblioteca c
+    qsort(&segue_record[0], ordenado_header.quantidadePessoas, sizeof(SegueRecord), compare);
+
+    // 5. Escrever o vetor em ordem no arquivo segue ordenado
+    escreveVetorEmSegue(ordenado_bin_file, &segue_record[0], ordenado_header.quantidadePessoas);
+    statusSegue(ordenado_bin_file, &ordenado_header, '1'); // consistente pós escrita
+
+    // 6. Fechar os arquivos
+    fclose(ordenado_bin_file);
+    fclose(desordenado_bin_file);
+
+    // 7. debug
+    binarioNaTela(arquivoSegueOrdenado);
+}
+
+/*
+Funcionalidade 10: Junção dos Arquivos de Dados pessoa.bin e segueOrdenado.bin 
+Relaciona-se pelo idPessoa e pelo idPessoaQueSegue para mesclar os arquivos, para retornar os registros
+de idPessoa presentes no arquivo segueOrdenado.bin comparado ao campo idPessoaQueSegue
+*/
+void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, char *arquivoSegueOrdenado, int qtdBusca);

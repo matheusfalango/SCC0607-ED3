@@ -28,7 +28,10 @@ void scan_quote_string(char *str);
 // FUNCIONALIDADES COMPLEMENTARES - DESENVOLVIDAS
 // ===============================================================================
 
+// Função de comparação para qsort
+int compare(const void *a, const void *b);
 
-
+// Função de conversão de data para int
+int data_to_int(const char data[10]);
 
 #endif
