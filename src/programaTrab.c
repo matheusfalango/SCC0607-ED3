@@ -453,7 +453,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 
     // 1. Verifica consistência do arquivo de dados pessoa e atualiza consistência
     PessoaHeader pessoa_header;
-    atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
+    lerCabecPessoa(pessoa_bin_file, &pessoa_header);
     if(verificaStatusPessoa(&pessoa_header) == 0) return;
     statusPessoa(pessoa_bin_file, &pessoa_header, '0');
     fseek(pessoa_bin_file, 0, SEEK_END);
@@ -481,8 +481,15 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         char linha_copia[256];
         strcpy(linha_copia, linha);
 
-        char *token = strtok(linha_copia, " ");
+        char *token = strtok(linha_copia, " "); // pula contador
         if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numInseridos++;
+            continue;
+        }
+
+        char *rest = strtok(NULL, ""); // pula contador
+        if (rest == NULL) { 
             printf("Registro inexistente.\n\n");
             numInseridos++;
             continue;
@@ -493,40 +500,53 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         record.removido = NAO_REMOVIDO_CHAR;
         record.nomePessoa = NULL;
         record.nomeUsuario = NULL;
-        char *rest = linha_copia;
 
         // Extrai campos usando novo_strtok para preservar campos vazios
         
         // idPessoa (int)
-        token = novo_strtok(rest, ", ", &rest);
-        record.idPessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        token = novo_strtok(rest, ",", &rest);
+        if(token != NULL) {
+            token = trim(token);
+            record.idPessoa = (strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        }
         
         // nomePessoa (string variável)
-        char nomePessoa_buffer[256];
-        token = novo_strtok(NULL, ", ", &rest);
-        if (token != NULL && strcmp(token, "NULO") != 0) {
-            strcpy(nomePessoa_buffer, token);
-            record.nomePessoa = trim(nomePessoa_buffer); // Remove espaços/quebras de linha
-            record.tamanhoNomePessoa = strlen(record.nomePessoa);
-        } else {
-            record.nomePessoa = NULL;
-            record.tamanhoNomePessoa = 0;
+        char nomePessoa_buffer[256], tempPessoa[256];
+        token = novo_strtok(NULL, ",", &rest);
+        if(token != NULL) { 
+            token = trim(token);
+            if (strcmp(token, "NULO") != 0) {
+                scan_string_aspas(tempPessoa, token);
+                scan_string_aspas(nomePessoa_buffer, tempPessoa);
+                record.nomePessoa = trim(nomePessoa_buffer); // Remove espaços/quebras de linha
+                record.tamanhoNomePessoa = strlen(record.nomePessoa);
+            } else {
+                record.nomePessoa = NULL;
+                record.tamanhoNomePessoa = 0;
+            }
         }
 
         // idadePessoa (int)
-        token = novo_strtok(NULL, ", ", &rest);
-        record.idadePessoa = (token != NULL && strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        token = novo_strtok(NULL, ",", &rest);
+        if(token != NULL) {
+            token = trim(token);
+            record.idadePessoa = (strcmp(token, "NULO") != 0) ? atoi(token) : -1;
+        }
 
         // nomeUsuario (string variável)
-        char nomeUsuario_buffer[256];
-        token = novo_strtok(NULL, " ", &rest);
-        if (token != NULL && token[0] != '\0' && strcmp(token, "NULO") != 0) {
-            strcpy(nomeUsuario_buffer, token);
-            record.nomeUsuario = trim(nomeUsuario_buffer); // Remove espaços/quebras de linha
-            record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
-        } else {
-            record.nomeUsuario = NULL;
-            record.tamanhoNomeUsuario = 0;
+        char nomeUsuario_buffer[256], tempUsuario[256];
+        token = novo_strtok(NULL, ",", &rest);
+        if(token != NULL) { 
+            token = trim(token);
+            if (strcmp(token, "NULO") != 0) {
+                scan_string_aspas(tempUsuario, token);
+                scan_string_aspas(nomeUsuario_buffer, tempUsuario);
+                record.nomeUsuario = trim(nomeUsuario_buffer); // Remove espaços/quebras de linha
+                record.tamanhoNomeUsuario = strlen(record.nomeUsuario);
+            } else {
+                record.nomeUsuario = NULL;
+                record.tamanhoNomeUsuario = 0;
+            }
         }
         
         // Calcular tamanho do registro (fixo + variável)
@@ -537,7 +557,6 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         
         // 5. Escrever registro no arquivo pessoa.bin
         long int atual_byte_offset = ftell(pessoa_bin_file); // Byte offset de início do registro
-        //fseek(pessoa_bin_file, 0, SEEK_END); removi para nao pular lixo desnecessario
 
         // Cabeçalho do registro (removido + tamanhoRegistro)
         fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
@@ -571,6 +590,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     }
 
     // 9. Atualizar o cabeçalho do arquivo pessoa
+    statusPessoa(pessoa_bin_file, &pessoa_header, '1');
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
     fclose(pessoa_bin_file);
 

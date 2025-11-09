@@ -79,22 +79,23 @@ final de uma string e alocar uma nova string.
 */
 char *trim(char *str) {
 
-		int n = strlen(str); // n é o tamanho da str
-		
-		// Itera do fim para o começo, removendo caracteres indesejados
-    while (n > 0 && (str[n-1] == ' ' || str[n-1] == '\n' || str[n-1] == '\r' || str[n-1] == '\t')) {
-				n--;
+	char *inicio = str;
+    while (*inicio == ' ' || *inicio == '\n' || *inicio == '\r' || *inicio == '\t') {
+        inicio++;
     }
-
-		// Novo espaço para alocar a nova string sem os caracteres indesejados
-		// Aloca n+1 bytes para incluir o terminador nulo
-		char *new_str = (char*) malloc((n+1) * sizeof(char));
-		if (new_str == NULL) return NULL;
-
-		// Copia a parte "limpa" da string original
-		strncpy(new_str, str, n);
-		new_str[n] = '\0'; // Adiciona terminador nulo
-
-		return new_str; // Retorna a nova string limpa
+    
+    int n = strlen(inicio); // n é o tamanho da str
+    // Itera do fim para o começo, removendo caracteres indesejados
+    while (n > 0 && (inicio[n-1] == ' ' || inicio[n-1] == '\n' || inicio[n-1] == '\r' || inicio[n-1] == '\t')) {
+        n--;
+    }
+    // Novo espaço para alocar a nova string sem os caracteres indesejados
+    // Aloca n+1 bytes para incluir o terminador nulo
+    char *new_str = (char*) malloc((n+1) * sizeof(char));
+    if (new_str == NULL) return NULL;
+    // Copia a parte "limpa" da string original
+    strncpy(new_str, inicio, n);
+    new_str[n] = '\0'; // Adiciona terminador nulo
+    return new_str; // Retorna a nova string limpa
 }
 
