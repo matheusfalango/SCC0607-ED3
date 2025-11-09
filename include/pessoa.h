@@ -47,9 +47,9 @@ typedef struct {
 //Abre o arquivo pessoa de acordo com o modo de abertura desejado.
 FILE *abrirPessoa(char *arquivoSaidaBin, char *modo);
 
-//Implementação de printNaTela: Impressão da Estrutura Pessoa no Terminal
+//Implementação de printNaTelaPessoa: Impressão da Estrutura Pessoa no Terminal
 //Imprime os dados de um registro de pessoa no formato exigido.
-void printNaTela(PessoaRecord record);
+void printNaTelaPessoa(PessoaRecord pessoa_record);
 
 //Implementação de initCabecPessoa: Inicializar o Cabeçalho do Pessoa
 //Atualiza os valores iniciais para o arquivo de pessoas

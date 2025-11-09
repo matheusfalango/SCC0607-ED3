@@ -7,6 +7,7 @@
 // PROGRAMA PRINCIPAL
 // ===============================================================================
 
+#define QTD_ARGS 5
 
 /*
 Função principal (main) para controlar o fluxo do programa
@@ -23,12 +24,12 @@ int main() {
 
     line[strcspn(line, "\n")] = '\0'; // Remove '\n' se existir
 
-    char *argv[4] = {NULL}; // Array para armazenar os argumentos
+    char *argv[QTD_ARGS] = {NULL}; // Array para armazenar os argumentos
     char *rest = strtok(line, " ");
     int index = 0;
 
     // Tokeniza a linha de entrada
-    while (rest != NULL && index < 4) {
+    while (rest != NULL && index < QTD_ARGS) {
         argv[index] = rest;
         index++;
         rest = strtok(NULL, " ");
@@ -90,10 +91,11 @@ int main() {
 
         case 10:
         // Argumentos: 10 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin] [qtd_buscas]
+        juncaoPessoaSegue(argv[1], argv[2], argv[3], atoi(argv[4]));
         break;
 
         default:
-        printf("Funcionalidade inválida");
+        printf("Funcionalidade inválida!\n");
         return EXIT_FAILURE;
     }
 

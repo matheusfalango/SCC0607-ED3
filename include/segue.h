@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "constantes.h"
+#include "lista.h"
 
 // ===============================================================================
 // DEFINIÇÕES - ARQUIVO SEGUE
@@ -76,6 +77,19 @@ void lerSegueEmVetor(FILE *segue_bin_file, SegueRecord *segue_record, int qtdPes
 //Escrita de um vetor de registros no arquivo segue
 void escreveVetorEmSegue(FILE *segue_bin_file, SegueRecord *segue_record, int qtdPessoas);
 
+//Implementação de buscarPessoaEmSegue: Busca registros de Pessoa relacionados no arquivo Segue em memória
+//Buscar registros de Segue, em memoria no vetor, relacionados no arquivo Pessoa, em memória na lista,
+//e imprime os dados da pessoa e do segue relacionado ao idPessoa
+void buscarPessoaEmSegue(Lista *lista_registros, SegueRecord *segue_record, int qtdPessoasSegue);
+
+//Implementação de printNaTelaSegue: Impressão da Estrutura Segue no Terminal
+//Escreve os dados de um registro de segue no formato exigido no terminal.
+void printNaTelaSegue(SegueRecord segue_record);
+
+//Implementação de buscaBinariaIdPessoaQueSegue: Busca Binária por idPessoaQueSegue no Arquivo Segue em memória no vetor ordenado
+//Busca binária por idPessoaQueSegue no arquivo segue ordenado em memoria no vetor
+//e retorna a quantidade de registros encontrados com o idPessoaQueSegue igual ao idPessoaProcurado
+int buscaBinariaIdPessoaQueSegue(SegueRecord *segue_header, int qtdPessoasSegue, int idPessoaProcurado, int *primeiraPosicao);
 
 //Implementação de verificaStatusSegue: Verifica o Status de Consistência do Arquivo
 //Verifica o status do arquivo de segue.

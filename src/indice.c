@@ -51,6 +51,18 @@ void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header) {
 
 
 /*
+Implementação de atualizaCabecIndice: Atualiza o Cabeçalho do Indice
+Atualiza o cabeçalho do arquivo de indice.
+@param indice_bin_file: O endereço do arquivo do indice.
+@param sindice_header: A estrutura do cabeçalho do arquivo do indice.
+*/
+void lerCabecIndice(FILE *indice_bin_file, IndexHeader *indice_header) {
+    fseek(indice_bin_file, 0, SEEK_SET);
+    fread(&indice_header->status, sizeof(char), 1, indice_bin_file);
+}
+
+
+/*
 Implementação de statusIndice: Atualiza o Status do Índice Primário
 Atualiza o status do arquivo de índice primário
 @param indice_bin_file: O endereço do arquivo do índice.

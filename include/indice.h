@@ -38,16 +38,14 @@ typedef struct {
 //Implementação da abrirIndice: Abertura de Arquivo de Índice Primário
 //Abre o arquivo indice de acordo com o modo de abertura desejado.
 FILE *abrirIndice(char *nomeArquivoIndice, char *modo);
-//Implementação da abrirIndice: Abertura de Arquivo de Índice Primário
-//Abre o arquivo indice de acordo com o modo de abertura desejado.
-FILE *abrirIndice(char *nomeArquivoIndice, char *modo);
 
 //Implementação de initCabecIndice: Inicializar o Cabeçalho do Índice Primário
 //Atualiza os valores iniciais para o arquivo de índice primário
 void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header);
-//Implementação de initCabecIndice: Inicializar o Cabeçalho do Índice Primário
-//Atualiza os valores iniciais para o arquivo de índice primário
-void initCabecIndice(FILE *indice_bin_file, IndexHeader *index_header);
+
+//Implementação de lerCabecIndice: Atualiza o Cabeçalho do Indice
+//Atualiza o cabeçalho do arquivo de indice.
+void lerCabecIndice(FILE *indice_bin_file, IndexHeader *indice_header);
 
 //Implementação de statusIndice: Atualiza o Status do Índice Primário
 //Atualiza o status do arquivo de índice primário

@@ -9,8 +9,8 @@
 // ===============================================================================
 
 /*
-//Implementação da abrirPessoa: Abertura de Arquivo de Pessoa
-//Abre o arquivo pessoa de acordo com o modo de abertura desejado.
+Implementação da abrirPessoa: Abertura de Arquivo de Pessoa
+Abre o arquivo pessoa de acordo com o modo de abertura desejado.
 @param arquivoSaidaBin: Nome do arquivo de pessoa a ser criado.
 @param modo: Tipo de abertura do arquivo a ser usado.
 @return: Endereço de abertura do arquivo.
@@ -27,10 +27,11 @@ FILE *abrirPessoa(char *arquivoSaidaBin, char *modo) {
 
 
 /*
+Implementação de printNaTelaPessoa: Impressão da Estrutura Pessoa no Terminal
 Função complementar para printar registros na tela no formato exigido.
 @param pessoa_record: Estrutura PessoaRecord contendo os dados do registro a ser impresso.
 */
-void printNaTela(PessoaRecord pessoa_record) {
+void printNaTelaPessoa(PessoaRecord pessoa_record) {
 		printf("Dados da pessoa de codigo %d\n", pessoa_record.idPessoa);
 		
 		// Imprime nomePessoa ou '-' se for nulo

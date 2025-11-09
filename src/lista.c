@@ -89,7 +89,7 @@ void imprimirLista(Lista *lista) {
 
     No *atual = lista->inicio;
     while (atual != NULL) {
-        printNaTela(*atual->record);
+        printNaTelaPessoa(*atual->record);
         printf("\n");
         atual = atual->prox;
     }
@@ -111,11 +111,10 @@ void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista
     No *atual = lista->inicio;
     long int atualOffset;
     int atualId;
-    PessoaRecord *atualRecord;
 
-    while(1) {
+    while(atual != NULL) {
         // Atualiza id e offset do registro atual
-        atualRecord = atual->record;
+        PessoaRecord *atualRecord = atual->record;
         atualId = atualRecord->idPessoa;
         atualOffset = setProcuradoOffset(arvoreIndice, atualId);
 
@@ -123,14 +122,11 @@ void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista
         removeNoAVL(arvoreIndice, atualId);
         
         // Remove logicamente o registro no arquivo pessoa
-        fseek(pessoa_bin_file, atualOffset, SEEK_SET);
-        fread(&atualRecord->removido, sizeof(char), 1, pessoa_bin_file); // Lê o removido atual
         atualRecord->removido = REMOVIDO_CHAR;
         fseek(pessoa_bin_file, atualOffset, SEEK_SET);
         fwrite(&atualRecord->removido, sizeof(char), 1, pessoa_bin_file);
         
-        if(atual->prox != NULL) atual = atual->prox;
-        else break;
+        atual = atual->prox;
     }
 }
 

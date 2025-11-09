@@ -8,7 +8,6 @@
 // FUNCIONALIDADES - ARQUIVO SEGUE
 // ===============================================================================
 
-
 /*
 Implementação da abrirSegue: Abertura de Arquivo de Segue
 Abre o arquivo segue de acordo com o modo de abertura desejado.
@@ -92,10 +91,10 @@ void atualizaCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header) {
 
 
 /*
-Implementação de atualizaCabecPessoa: Atualiza o Cabeçalho do Pessoa
-Atualiza o cabeçalho do arquivo de pessoa.
-@param segue_bin_file: O endereço do arquivo do pessoa.
-@param segue_header: A estrutura do cabeçalho do arquivo do pessoa.
+Implementação de atualizaCabecSegue: Atualiza o Cabeçalho do Segue
+Atualiza o cabeçalho do arquivo de segue.
+@param segue_bin_file: O endereço do arquivo do segue.
+@param segue_header: A estrutura do cabeçalho do arquivo do segue.
 */
 void lerCabecSegue(FILE *segue_bin_file, SegueHeader *segue_header) {
     fseek(segue_bin_file, 0, SEEK_SET);
@@ -166,6 +165,127 @@ void escreveVetorEmSegue(FILE *segue_bin_file, SegueRecord *segue_record, int qt
         fwrite(&segue_record[i].dataFimQueSegue, sizeof(char), 10, segue_bin_file);
         fwrite(&segue_record[i].grauAmizade, sizeof(char), 1, segue_bin_file);
     }
+}
+
+/*
+Implementação de buscarPessoaEmSegue: Busca registros de Pessoa relacionados no arquivo Segue
+Buscar registros de Segue relacionados no arquivo Pessoa e imprime os dados da pessoa e do segue relacionado ao idPessoa
+@param segue_bin_file: Arquivo de registros Segue.
+@param lista_registros: Ponteiro para a lista de registros encontrados.
+@param segue_record: Ponteiro para o registro em memória do arquivo segue.
+@param qtdPessoasSegue: Quantidade de registros do arquivo segue.
+*/
+void buscarPessoaEmSegue(Lista *lista_registros, SegueRecord *segue_record, int qtdPessoasSegue) {
+    if(lista_registros == NULL || segue_record == NULL) return;
+
+    No* atual = lista_registros->inicio;
+    if(atual == NULL) return;
+    
+    while(atual != NULL) {
+        PessoaRecord *atualRecord = atual->record;
+        if(atualRecord == NULL) return;
+
+        int idPessoa = atualRecord->idPessoa; // define a variável idPessoa do registro atual em análise
+        int primeiroRegistro;
+        int qtdRegistrosEncontrados = buscaBinariaIdPessoaQueSegue(segue_record, qtdPessoasSegue, idPessoa, &primeiroRegistro);
+
+        if (qtdRegistrosEncontrados > 0) {
+            printNaTelaPessoa(*atualRecord); // printa na tela o registro pessoa
+            printf("\n");
+            for(int i = primeiroRegistro; i < primeiroRegistro + qtdRegistrosEncontrados - 1; i++) {
+                printNaTelaSegue(segue_record[i]); // printa na tela o registro que pessoa segue
+            }
+        printf("\n");
+        }
+
+        atual = atual->prox;
+    }
+}
+
+
+/*
+Implementação de printNaTelaSegue: Impressão da Estrutura Segue no Terminal
+Escreve os dados de um registro de segue no formato exigido no terminal.
+@param record: Estrutura SegueRecord contendo os dados do registro a ser impresso.
+*/
+void printNaTelaSegue(SegueRecord segue_record) {
+    // Imprime o id da pessoa que segue
+    printf("Segue a pessoa de codigo: %d\n", segue_record.idPessoaQueESeguida);
+		
+    // Imprime o motivo de seguir uma pessoa ou '-' se for nulo
+    if (segue_record.grauAmizade == '0') {
+        printf("Justificativa para seguir: celebridade\n");
+    } else if (segue_record.grauAmizade == '1') {
+        printf("Justificativa para seguir: amiga de minha amiga\n");
+    } else if (segue_record.grauAmizade == '2') {
+        printf("Justificativa para seguir: minha amiga\n");
+    } else {
+        printf("Justificativa para seguir: -\n");
+    }
+    
+    // Imprime a data que começou a seguir a pessoa
+    if(segue_record.dataInicioQueSegue[0] != '$' && segue_record.dataInicioQueSegue[0] != '\0') {
+        printf("Começou a seguir em: %s\n", segue_record.dataInicioQueSegue);
+    } else {
+        printf("Começou a seguir em: -\n");
+    }
+
+    // Imprime a data que parou de seguir a pessoa
+    if(segue_record.dataFimQueSegue[0] != '$' && segue_record.dataFimQueSegue[0] != '\0') {
+        printf("Parou de seguir em: %s\n", segue_record.dataFimQueSegue);
+    } else {
+        printf("Parou de seguir em: -\n");
+    }
+
+    printf("\n");
+
+}
+
+/*Implementação de buscaBinariaIdPessoaQueSegue: Busca Binária por idPessoaQueSegue no Arquivo Segue
+Busca binária por idPessoaQueSegue no arquivo segue ordenado 
+e retorna a quantidade de registros encontrados com o idPessoaQueSegue igual ao idPessoaProcurado
+@param segue_record: A estrutura do registro do arquivo do segue.
+@param qtdPessoasSegue: A quantidade de registros do arquivo do segue.
+@param idPessoaProcurado: O idPessoa que está sendo procurado.
+@param primeiraPosicao: Ponteiro para armazenar a posição do primeiro registro encontrado.
+@return: Inteiro indicando a quantidade de registros encontrados com o idPessoaQueSegue igual ao idPessoaProcurado.
+*/
+int buscaBinariaIdPessoaQueSegue(SegueRecord *segue_record, int qtdPessoasSegue, int idPessoaProcurado, int *primeiraPosicao) {
+    int esquerda = 0; // primeiro indice de registro no vetor
+    int direita = qtdPessoasSegue - 1; // ultimo indice registro no vetor
+    int encontrado = -1; // armazena o indice da primeira aparição do id buscado
+
+    //busca binaria para encontrar as ocorrências do idPessoaProcurado
+    while(esquerda <= direita) {
+        int meio = (esquerda + direita)/2;
+
+        if(segue_record[meio].idPessoaQueSegue == idPessoaProcurado) {
+            encontrado = meio;
+            break;
+        } 
+        else if(segue_record[meio].idPessoaQueSegue < idPessoaProcurado) esquerda = meio + 1;
+        else if(segue_record[meio].idPessoaQueSegue > idPessoaProcurado) direita = meio - 1;
+    }
+
+    if(encontrado == -1) {
+        // nao encontrou nenhum registro com o id procurado
+        *primeiraPosicao = -1;
+        return 0;
+    }
+
+    //encontra indice do primeiro e ultimo registro com o id procurado
+    int primeiroIndice = encontrado;
+    while(primeiroIndice > 0 && segue_record[primeiroIndice-1].idPessoaQueSegue == segue_record[encontrado].idPessoaQueSegue) {
+        primeiroIndice--;
+    }
+
+    int ultimoIndice = encontrado;
+    while(segue_record[ultimoIndice].idPessoaQueSegue == segue_record[encontrado].idPessoaQueSegue) {
+        ultimoIndice++;
+    }
+
+    *primeiraPosicao = primeiroIndice;
+    return (ultimoIndice - primeiroIndice + 1);
 }
 
 

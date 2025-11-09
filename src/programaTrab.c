@@ -322,6 +322,7 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
     if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // inconsistente para deletar registros logicamente
 
     // 2. Carrega o índice para a Árvore AVL em memória
     ARV* arvoreIndice = criarAVL();
@@ -333,7 +334,6 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 
     // 3. Processa as buscas para deletar logicamente
     int numDeletados = 1;
-    Lista *lista_registros;
     while (numDeletados <= qtdDelete) {
         char linha[256];
         
@@ -393,35 +393,34 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 
         // 4. Executa a busca dos registros
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
-        lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
         
         if(lista_registros->tamanho > 0) {
             // 5. Deleta os registros da lista
-            statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // inconsistente para deletar registros logicamente
+            fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
             deletarPessoaDaLista(pessoa_bin_file, arvoreIndice, lista_registros);
-
-            // 6. Abertura do arquivo índice para reescrita
-            indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "wb"); // escrita em um novo arquivo limpo
-            if (indice_bin_file == NULL) return;
-
-            IndexHeader index_header;
-            initCabecIndice(indice_bin_file, &index_header); // Função para inicializar cabeçalho no arquivo
-            statusIndice(indice_bin_file, &index_header, '0'); // Inconsistente durante escrita
-
-            // 7. Escrever a árvore AVL no arquivo índice (em ordem crescente)
-            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
-            printCrescIndice(arvoreIndice->raiz, indice_bin_file);
-            statusIndice(indice_bin_file, &index_header, '1');
-            fclose(indice_bin_file);
-
+            pessoa_header.quantidadeRemovidos += lista_registros->tamanho; // atualiza tamanho da qtd de removidos
         }
 
         liberarLista(lista_registros); // liberar memória
         numDeletados++; // atualiza contagem de buscas
     }
 
+    // 6. Abertura do arquivo índice para reescrita
+    indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "wb"); // escrita em um novo arquivo limpo
+    if (indice_bin_file == NULL) return;
+
+    IndexHeader index_header;
+    initCabecIndice(indice_bin_file, &index_header); // Função para inicializar cabeçalho no arquivo
+    statusIndice(indice_bin_file, &index_header, '0'); // Inconsistente durante escrita
+
+    // 7. Escrever a árvore AVL no arquivo índice (em ordem crescente)
+    fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET); // Posiciona após o cabeçalho
+    printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+    statusIndice(indice_bin_file, &index_header, '1');
+    fclose(indice_bin_file);
+
     // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
-    pessoa_header.quantidadeRemovidos = lista_registros->tamanho;
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 9. Libera memória
@@ -882,4 +881,121 @@ Funcionalidade 10: Junção dos Arquivos de Dados pessoa.bin e segueOrdenado.bin
 Relaciona-se pelo idPessoa e pelo idPessoaQueSegue para mesclar os arquivos, para retornar os registros
 de idPessoa presentes no arquivo segueOrdenado.bin comparado ao campo idPessoaQueSegue
 */
-void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, char *arquivoSegueOrdenado, int qtdBusca);
+void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, char *arquivoSegueOrdenado, int qtdBusca) {
+    // 1. Abertura dos arquivos pessoa, indice e segue
+    FILE *pessoa_bin_file = abrirPessoa(arquivoEntradaBin, "rb");
+    if(pessoa_bin_file == NULL) return;
+
+    FILE *indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "rb");
+    if(indice_bin_file == NULL) return;
+    
+    FILE *segue_bin_file = abrirSegue(arquivoSegueOrdenado, "rb");
+    if(segue_bin_file == NULL) return;
+
+    // 2. Ler cabeçalho do arquivo
+    PessoaHeader pessoa_header;
+    lerCabecPessoa(pessoa_bin_file, &pessoa_header);
+
+    IndexHeader indice_header;
+    lerCabecIndice(indice_bin_file, &indice_header);
+
+    SegueHeader segue_header;
+    lerCabecSegue(segue_bin_file, &segue_header);
+
+    // 3. Verifica consistência dos arquivos
+    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+    if(verificaStatusSegue(segue_bin_file, &segue_header) == 0) return;
+
+    // 4. Carregar indice na arvore e segue em vetor em memória
+    // indice na arvore AVL
+    ARV* arvoreIndice = criarAVL();
+    escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
+    fclose(indice_bin_file); // fechamento do arquivo indice que nao sera mais usado
+
+    // segue em vetor ordenado por qsort
+    SegueRecord segue_record[segue_header.quantidadePessoas];
+    lerSegueEmVetor(segue_bin_file, &segue_record[0], segue_header.quantidadePessoas);
+
+    // 5. Processa a busca para junção a partir de idPessoa do arquivo Pessoa
+    int numBusca = 1;
+    while (numBusca <= qtdBusca) {
+        // 6. Leitura do stdin para determinar busca
+        char linha[256];
+        
+        // Lê a linha de comando de busca
+        memset(linha, 0, sizeof(linha));
+        if (fgets(linha, sizeof(linha), stdin) == NULL) break;
+        linha[strcspn(linha, "\r\n")] = '\0'; // Remove \n e \r
+        if (strlen(linha) == 0) continue; // Pula linhas vazias
+
+        // Prepara a linha para tokenização (ex: "1 campo=valor")
+        char linha_copia[256];
+        strcpy(linha_copia, linha);
+
+        char *token = strtok(linha_copia, " ");
+        if (token == NULL) { 
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        token = strtok(NULL, " "); // Pula o número da busca
+        if (token == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Processa campo=valor
+        char campo[50];
+        char valor[200];
+
+        char *igual_pos = strchr(token, '=');
+        if (igual_pos == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
+        }
+
+        // Extrai 'campo'
+        int campo_len = igual_pos - token;
+        strncpy(campo, token, campo_len);
+        campo[campo_len] = '\0';
+
+        // Extrai 'valor'
+        strcpy(valor, igual_pos + 1);
+
+        // Trata valores com espaços (se houver mais tokens)
+        char *resto = strtok(NULL, "");
+        if (resto != NULL && strlen(resto) > 0) {
+            strcat(valor, " ");
+            strcat(valor, resto);
+        }
+
+        // Limpa o valor (remove aspas e espaços extras)
+        char valor_final[200];
+        scan_string_aspas(valor_final, valor);
+
+        // 7. Lista com registros encontrados na busca
+        fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
+        Lista* lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo, valor_final);
+        // Busca os registros segue relacionados com o valor de busca do arq pessoa
+        // além de que ja imprime no terminal os dados necessários
+        buscarPessoaEmSegue(lista_registros, &segue_record[0], segue_header.quantidadePessoas);
+
+        // 8. Libera lista
+        liberarLista(lista_registros);
+
+        numBusca++;
+    }
+
+    // 9. Libera memória
+    liberarAVL(arvoreIndice->raiz);
+    free(arvoreIndice);
+
+    // 10. Fecha arquivos
+    fclose(pessoa_bin_file);
+    fclose(segue_bin_file);
+}
+

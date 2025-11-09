@@ -253,8 +253,12 @@ void removerNo(ARV* arv, int id) {
     if (busca == NULL) {
         printf("Registro não encontrado!\n\n");
     } else {
+        NO* pai_rebalancear = NULL; // Ponto inicial para rebalanceamento
+
         // Caso 1: Nó folha (0 filhos)
         if (busca->dir == NULL && busca->esq == NULL) {
+            pai_rebalancear = busca->ant; // Rebalancear a partir do pai
+
             // Se for a raiz
             if (busca == arv->raiz) {
                 arv->raiz = NULL;
@@ -344,6 +348,8 @@ void removerNo(ARV* arv, int id) {
         // Caso 3: Nó com um filho à direita
         else if (busca->dir != NULL && busca->esq == NULL)
         {
+            pai_rebalancear = busca->ant; // Rebalancear a partir do pai
+
             if (busca == arv->raiz) {
                 arv->raiz = busca->dir; // O filho se torna a nova raiz
                 busca->dir->ant = NULL;
@@ -363,6 +369,8 @@ void removerNo(ARV* arv, int id) {
 
         // Caso 4: Nó com um filho à esquerda
         else if (busca->esq!=NULL && busca->dir == NULL) {
+            pai_rebalancear = busca->ant; // Rebalancear a partir do pai
+            
             if(busca == arv->raiz) {
                 arv->raiz = busca->esq; // O filho se torna a nova raiz
                 busca->esq->ant = NULL;
@@ -383,8 +391,18 @@ void removerNo(ARV* arv, int id) {
         free(busca); // Libera a memória do nó removido
         
         // Reajusta alturas e rebalanceia a árvore
-        altura(arv->raiz);
-        rotac(arv,arv->raiz);
+        NO* atual = pai_rebalancear;
+        while (atual != NULL) {
+            altura(atual);
+            rotac(arv, atual);
+            atual = atual->ant;
+        }
+        
+        // Garante que a raiz também seja rebalanceada
+        if (arv->raiz != NULL) {
+            altura(arv->raiz);
+            rotac(arv, arv->raiz);
+        }
     }
 }
 
