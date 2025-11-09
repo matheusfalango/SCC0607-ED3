@@ -180,12 +180,9 @@ Verifica o status do arquivo de pessoa.
 @param pessoa_header: A estrutura do cabeçalho do arquivo do pessoa.
 @return: Booleano da consistência do arquivo pessoa.
 */
-bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header) {
-    fseek(pessoa_bin_file, 0, SEEK_SET);
-    fread(&pessoa_header->status, sizeof(char), 1, pessoa_bin_file);
+bool verificaStatusPessoa(PessoaHeader *pessoa_header) {
     if (pessoa_header->status == '0') {
         printf("Falha no processamento do arquivo.\n");
-        fclose(pessoa_bin_file);
         return 0;
     }
 
@@ -208,7 +205,10 @@ PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file) {
     pessoa_record->nomeUsuario = NULL;
     
     // Tenta ler o campo 'removido'
-    if(fread(&pessoa_record->removido, sizeof(char), 1, pessoa_bin_file) != 1) return NULL;
+    if(fread(&pessoa_record->removido, sizeof(char), 1, pessoa_bin_file) != 1) {
+        free(pessoa_record);
+        return NULL; // acabou de varrer o arquivo
+    }
 
     if (pessoa_record->removido == NAO_REMOVIDO_CHAR ) {
         // Registro não removido: lê e processa

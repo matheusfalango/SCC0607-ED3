@@ -70,8 +70,8 @@ Atualiza o status do arquivo de índice primário
 @param status: O char atual para definir o status atual do arquivo do índice.
 */
 void statusIndice(FILE *indice_bin_file, IndexHeader *index_header, char status) {
-    fseek(indice_bin_file, 0, SEEK_SET);
-    fread(&index_header->status, sizeof(char), 1, indice_bin_file); // Lê o status atual
+    //fseek(indice_bin_file, 0, SEEK_SET);
+    //fread(&index_header->status, sizeof(char), 1, indice_bin_file); // Lê o status atual
     index_header->status = status;
     fseek(indice_bin_file, 0, SEEK_SET);
     fwrite(&index_header->status, sizeof(char), 1, indice_bin_file);
@@ -106,16 +106,12 @@ void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice) {
 /*
 Implementação de verificaStatusIndice: Verifica o Status de Consistência do Arquivo
 Verifica o status do arquivo de pessoa.
-@param indice_bin_file: O endereço do arquivo do pessoa.
 @param indice_header: A estrutura do cabeçalho do arquivo do pessoa.
 @return: Booleano da consistência do arquivo pessoa.
 */
-bool verificaStatusIndice(FILE *indice_bin_file, IndexHeader *indice_header) {
-    fseek(indice_bin_file, 0, SEEK_SET);
-    fread(&indice_header->status, sizeof(char), 1, indice_bin_file);
+bool verificaStatusIndice(IndexHeader *indice_header) {
     if (indice_header->status == '0') {
         printf("Falha no processamento do arquivo.\n");
-        fclose(indice_bin_file);
         return 0;
     }
 

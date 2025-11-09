@@ -183,7 +183,7 @@ void listarRegistros(char *arquivoSaidaBin) {
     lerCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // Verificar consistência
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
 
     // Pula o cabeçalho
     fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
@@ -215,7 +215,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
 
     // 2. Carrega o índice para a Árvore AVL em memória
     ARV* arvoreIndice = criarAVL();
@@ -224,7 +224,7 @@ void buscarRegistros(char *arquivoSaidaBin, char *arquivoIndicePrimarioBin, int 
 
     // Ler cabeçalho
     IndexHeader indice_header;
-    if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return; // Verificar consistência
+    if(verificaStatusIndice(&indice_header) == 0) return; // Verificar consistência
 
     escreveIndiceArvore(indice_bin_file, arvoreIndice); // Processamento de leitura e inserção
     fclose(indice_bin_file);
@@ -321,7 +321,8 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    lerCabecPessoa(pessoa_bin_file, &pessoa_header);
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
     statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // inconsistente para deletar registros logicamente
 
     // 2. Carrega o índice para a Árvore AVL em memória
@@ -412,6 +413,7 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
 
     IndexHeader index_header;
     initCabecIndice(indice_bin_file, &index_header); // Função para inicializar cabeçalho no arquivo
+    if(verificaStatusIndice(&index_header) == 0) return; // verifica consistẽncia
     statusIndice(indice_bin_file, &index_header, '0'); // Inconsistente durante escrita
 
     // 7. Escrever a árvore AVL no arquivo índice (em ordem crescente)
@@ -421,13 +423,17 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     fclose(indice_bin_file);
 
     // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
+    pessoa_header.quantidadePessoas = pessoa_header.quantidadePessoas - pessoa_header.quantidadeRemovidos;
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 9. Libera memória
     liberarAVL(arvoreIndice->raiz);
     free(arvoreIndice);
+
+    // 10. Fechar arquivo
     fclose(pessoa_bin_file);
 
+    // 11. Debug
     binarioNaTela(arquivoEntradaBin);
     binarioNaTela(arquivoIndicePrimarioBin);
 }
@@ -448,7 +454,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     // 1. Verifica consistência do arquivo de dados pessoa e atualiza consistência
     PessoaHeader pessoa_header;
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
     statusPessoa(pessoa_bin_file, &pessoa_header, '0');
     fseek(pessoa_bin_file, 0, SEEK_END);
 
@@ -573,7 +579,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     if (indice_bin_file == NULL) return;
 
     IndexHeader indice_header;
-    if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+    if(verificaStatusIndice(&indice_header) == 0) return;
 
     fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
     printCrescIndice(arvoreIndice->raiz, indice_bin_file);
@@ -602,7 +608,7 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
     // 1. Verifica consistência do arquivo de dados
     PessoaHeader pessoa_header;
     lerCabecPessoa(pessoa_bin_file, &pessoa_header);
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
     statusPessoa(pessoa_bin_file, &pessoa_header, '0'); // garantir que durante escrita, o arq esteja inconsistente
 
     // 2. Carrega o índice para a Árvore AVL em memória
@@ -628,14 +634,15 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         char linha_copia[256];
         strcpy(linha_copia, linha);
 
-        char *token = strtok(linha_copia, " ");
-        if (token == NULL) { 
+        char *token = strtok(linha_copia, " "); // Pula o número da busca
+        if (token == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
             continue;
         }
 
-        token = strtok(NULL, " "); // Pula o número da busca
+        // token campo1=valor1
+        token = strtok(NULL, " ");
         if (token == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
@@ -661,18 +668,18 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         // Extrai 'valor1'
         strcpy(valor1, igual_pos + 1);
 
-        token = strtok(NULL, " "); // Leitura dos outroa valores p atualização
-        if (token == NULL) {
-            printf("Registro inexistente.\n\n");
-            numBusca++;
-            continue;
+        // Token campo2=valor2
+        char *resto = strtok(NULL, " ");
+        if (resto != NULL && strlen(resto) > 0) {
+            strcat(valor1, " ");
+            strcat(valor1, resto);
         }
 
         // Processa campo2=valor2
         char campo2[50];
         char valor2[200];
 
-        igual_pos = strchr(token, '=');
+        igual_pos = strchr(resto, '=');
         if (igual_pos == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
@@ -680,15 +687,15 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         }
 
         // Extrai 'campo2'
-        campo_len = igual_pos - token;
-        strncpy(campo2, token, campo_len);
+        campo_len = igual_pos - resto;
+        strncpy(campo2, resto, campo_len);
         campo2[campo_len] = '\0';
 
         // Extrai 'valor2'
         strcpy(valor2, igual_pos + 1);
 
         // Trata valores com espaços (se houver mais tokens)
-        char *resto = strtok(NULL, "");
+        resto = strtok(NULL, "");
         if (resto != NULL && strlen(resto) > 0) {
             strcat(valor2, " ");
             strcat(valor2, resto);
@@ -703,22 +710,32 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
         Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo1, valor1_final);
         
-        if(lista_registros->tamanho > 0) {
-            // atualizar os registros encontrados na arvore
-            pessoa_header.quantidadeRemovidos += atualizaPessoa(pessoa_bin_file, arvoreIndice, lista_registros, campo2, valor2_final);
-            
-            // Reescrever o indice
-            indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
-            if (indice_bin_file == NULL) return;
+        if(lista_registros != NULL) {
+            if(lista_registros->tamanho > 0) {
+                // atualizar os registros encontrados na arvore
+                pessoa_header.quantidadeRemovidos += atualizaPessoa(pessoa_bin_file, arvoreIndice, lista_registros, campo2, valor2_final);            
+                // Reescrever o indice
+                indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
+                if (indice_bin_file == NULL) return;
 
-            IndexHeader indice_header;
-            if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+                IndexHeader indice_header;
+                lerCabecIndice(indice_bin_file, &indice_header);
+                if(verificaStatusIndice(&indice_header) == 0) {
+                    fclose(indice_bin_file);
+                    liberarLista(lista_registros);
+                    liberarAVL(arvoreIndice->raiz);
+                    free(arvoreIndice);
+                    return;
+                }
 
-            fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
-            printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+                statusIndice(indice_bin_file, &indice_header, '0');
 
-            statusIndice(indice_bin_file, &indice_header, '1');
-            fclose(indice_bin_file);
+                fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+                printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+
+                statusIndice(indice_bin_file, &indice_header, '1');
+                fclose(indice_bin_file);
+            }
         }
 
         // Atualizar contagem
@@ -903,8 +920,8 @@ void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, 
     lerCabecSegue(segue_bin_file, &segue_header);
 
     // 3. Verifica consistência dos arquivos
-    if(verificaStatusPessoa(pessoa_bin_file, &pessoa_header) == 0) return;
-    if(verificaStatusIndice(indice_bin_file, &indice_header) == 0) return;
+    if(verificaStatusPessoa(&pessoa_header) == 0) return;
+    if(verificaStatusIndice(&indice_header) == 0) return;
     if(verificaStatusSegue(segue_bin_file, &segue_header) == 0) return;
 
     // 4. Carregar indice na arvore e segue em vetor em memória

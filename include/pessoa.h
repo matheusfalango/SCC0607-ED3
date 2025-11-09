@@ -77,7 +77,7 @@ void copiarPessoaRecord(PessoaRecord *destino, PessoaRecord *origem);
 
 //Implementação de verificaStatusPessoa: Verifica o Status de Consistência do Arquivo
 //Verifica o status do arquivo de pessoa.
-bool verificaStatusPessoa(FILE *pessoa_bin_file, PessoaHeader *pessoa_header);
+bool verificaStatusPessoa(PessoaHeader *pessoa_header);
 
 //Implementação de lerRegistroPessoa: Lê um Registro de Pessoa do Arquivo
 //Lê um registro de pessoa do arquivo binário.

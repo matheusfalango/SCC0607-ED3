@@ -403,6 +403,7 @@ void removerNo(ARV* arv, int id) {
             altura(arv->raiz);
             rotac(arv, arv->raiz);
         }
+        arv->nosTaman--;
     }
 }
 

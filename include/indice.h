@@ -57,7 +57,7 @@ void escreveIndiceArvore(FILE *indice_bin_file, ARV *arvoreIndice);
 
 //Implementação de verificaStatusIndice: Verifica o Status de Consistência do Arquivo
 //Verifica o status do arquivo de indice.
-bool verificaStatusIndice(FILE *indice_bin_file, IndexHeader *indice_header);
+bool verificaStatusIndice(IndexHeader *indice_header);
 
 //Implementação de setProcuradoOffset: Define o Offset Atual no Arquivo de Índice
 //Define o offset atual no arquivo de índice para um ID específico.

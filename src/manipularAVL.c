@@ -19,13 +19,12 @@ void insereNoAVL(ARV* arv, int id, long int bOffset) {
 
 
 /*
-Função de remover um nó na Árvore AVL.
+Função de remover um nó na Árvore AVL e atualizar a estrutura da árvore.
 @param arv: Ponteiro para a Árvore AVL.
 @param id: ID do registro a ser inserido (chave primária).
 */
 void removeNoAVL(ARV* arv, int id) {
 		removerNo(arv, id);
-
 }
 
 

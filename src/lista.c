@@ -67,9 +67,11 @@ void liberarLista(Lista *lista) {
         atual = atual->prox;
 
         // Libera a memória alocada para as strings do registro atual
-        if (temp->record->nomePessoa != NULL) free(temp->record->nomePessoa);
-        if (temp->record->nomeUsuario != NULL) free(temp->record->nomeUsuario);
-        free(temp->record);
+        if(temp->record != NULL) {
+            if (temp->record->nomePessoa != NULL) free(temp->record->nomePessoa);
+            if (temp->record->nomeUsuario != NULL) free(temp->record->nomeUsuario);
+            free(temp->record);
+        }
 
         // Libera a memória do nó
         free(temp);
@@ -119,7 +121,7 @@ void deletarPessoaDaLista(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista
         atualOffset = setProcuradoOffset(arvoreIndice, atualId);
 
         // Remove o nó do registro na AVL
-        removeNoAVL(arvoreIndice, atualId);
+        if(atualOffset != -1) removeNoAVL(arvoreIndice, atualId);
         
         // Remove logicamente o registro no arquivo pessoa
         atualRecord->removido = REMOVIDO_CHAR;
@@ -167,6 +169,11 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
         atualTamanhoNomePessoa = atualRecord->tamanhoNomePessoa;
         atualTamanhoNomeUsuario = atualRecord->tamanhoNomeUsuario;
         atualOffset = setProcuradoOffset(arvoreIndice, atualRecord->idPessoa);
+
+        if(atualOffset == -1) {
+            atual = atual->prox;
+            continue;
+        }
 
         // Busca o campo2 para ser atualizado
         if (strcmp(campo2, "idPessoa") == 0) {
@@ -252,7 +259,7 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
 
             } else if (16 + tamanhoValor2 + atualTamanhoNomePessoa > atualTamanhoRegistro && strcmp(valor2, "NULO") != 0) {
                 fseek(pessoa_bin_file, atualOffset, SEEK_SET);
-                atualRemovido = '1';
+                atualRemovido = REMOVIDO_CHAR;
                 fwrite(&atualRemovido, sizeof(char), 1, pessoa_bin_file);
                 quantidadeRemovidos++;
                 
@@ -264,7 +271,7 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 if(copiaRecord->nomeUsuario != NULL) free(copiaRecord->nomeUsuario);
                 copiaRecord->nomeUsuario = (char *) malloc(tamanhoValor2 + 1);
                 strcpy(copiaRecord->nomeUsuario, valor2);
-                copiaRecord->tamanhoNomePessoa = tamanhoValor2;
+                copiaRecord->tamanhoNomeUsuario = tamanhoValor2;
 
                 fseek(pessoa_bin_file, 0, SEEK_END);
                 atualOffset = ftell(pessoa_bin_file);
@@ -280,6 +287,7 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 }
 
                 long int offsetLixo = sizeof(char) + 4*sizeof(int);
+                if(atualTamanhoNomePessoa > 0) offsetLixo += atualTamanhoNomePessoa;
                 fseek(pessoa_bin_file, atualOffset + offsetLixo,SEEK_SET);
                 for(int i = 0; i < atualTamanhoNomeUsuario; i++) fputc(LIXO_CHAR, pessoa_bin_file);
             
@@ -318,9 +326,11 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
 			if (temp == NULL) {
 				// Acabou
 				break;
-			}
-			
-			addLista(lista, temp);
+			} else if (temp->removido == REMOVIDO_CHAR) {
+                continue;
+            }
+		
+		    addLista(lista, temp);
 		}
 
 	} else if (campo != NULL && valor_final != NULL && arvoreIndice != NULL) {
@@ -330,7 +340,6 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
 
             if (offset != -1) {
                 // Achar
-                fseek(pessoa_bin_file, 0, SEEK_SET);
                 fseek(pessoa_bin_file, offset, SEEK_SET);
 
                 // Colocar na lista
@@ -346,10 +355,14 @@ Lista *buscaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, char *campo, char *
     				break;
     			}
             
-    	        if(temp->removido == NAO_REMOVIDO_CHAR && filtroCampoPessoa(temp, campo, valor_final)){ // se os parametros foram encontrados no registro, add na lista					
+    	        if (temp->removido == NAO_REMOVIDO_CHAR && filtroCampoPessoa(temp, campo, valor_final)){ // se os parametros foram encontrados no registro, add na lista					
     				addLista(lista, temp);
                     if (strcmp(campo, "nomeUsuario") == 0) break; // sao unicos
-             	}
+             	} else if (temp->removido == REMOVIDO_CHAR) {
+                    if(temp->nomePessoa != NULL) free(temp->nomePessoa);
+                    if(temp->nomeUsuario != NULL) free(temp->nomeUsuario);
+                    free(temp);
+                }
             }
         }
     }
