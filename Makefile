@@ -21,7 +21,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 MAKEFILE = $(MAKE_DIR)/Makefile
 
 # Arquivos de dados a serem limpos
-DATA_FILES = pessoa.bin indexaPessoa.bin segue.bin ordenado.bin
+DATA_FILES = *.bin
 
 # Regra padrão
 all: $(TARGET)

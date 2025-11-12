@@ -25,5 +25,9 @@ char *novo_strtok(char *str, const char *delim, char **saveptr);
 // @return: Uma nova string alocada (deve ser liberada).
 char *trim(char *str);
 
+// Função auxiliar para remover caracteres especiais (espaço, \n, \r, \t) do 
+// final de uma string e alocar uma nova string.
+void trimSemAloc(char *str);
+
 
 #endif

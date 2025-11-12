@@ -389,8 +389,11 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         }
 
         // Limpa o valor (remove aspas e espaços extras)
-        char valor_final[200];
-        scan_string_aspas(valor_final, valor);
+        char *valor_final = valor;
+        if(strcmp(campo,"nomeUsuario") == 0 || strcmp(campo,"nomePessoa") == 0 || strcmp(valor, "NULO")) {
+            if(strcmp(valor, "NULO") != 0) scan_string_aspas(valor_final, valor);
+            valor_final = trim(valor_final);
+        }
 
         // 4. Executa a busca dos registros
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
@@ -557,21 +560,7 @@ void inserirRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
         
         // 5. Escrever registro no arquivo pessoa.bin
         long int atual_byte_offset = ftell(pessoa_bin_file); // Byte offset de início do registro
-
-        // Cabeçalho do registro (removido + tamanhoRegistro)
-        fwrite(&record.removido, sizeof(char), 1, pessoa_bin_file);
-        fwrite(&record.tamanhoRegistro, sizeof(int), 1, pessoa_bin_file);
-
-        // Campos fixos
-        fwrite(&record.idPessoa, sizeof(int), 1, pessoa_bin_file);
-        fwrite(&record.idadePessoa, sizeof(int), 1, pessoa_bin_file);
-
-        // Campos variáveis (tamanho + dado)
-        fwrite(&record.tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomePessoa != NULL && record.nomePessoa[0] != '\0') fwrite(record.nomePessoa, sizeof(char), record.tamanhoNomePessoa, pessoa_bin_file);
-
-        fwrite(&record.tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-        if (record.nomeUsuario != NULL && record.nomeUsuario[0] != '\0') fwrite(record.nomeUsuario, sizeof(char), record.tamanhoNomeUsuario, pessoa_bin_file);
+        escrevePessoaRecord(pessoa_bin_file, &record);
         
         // 6. Atualizar contagem do cabeçalho do arquivo pessoa.bin
         pessoa_header.quantidadePessoas++;
@@ -686,20 +675,24 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         campo1[campo_len] = '\0';
 
         // Extrai 'valor1'
-        strcpy(valor1, igual_pos + 1);
+        char *inicio_valor1 = igual_pos + 1;
+        int valor1_len = strlen(inicio_valor1);
+        strncpy(valor1, inicio_valor1, valor1_len);
+        valor1[valor1_len] = '\0';
 
         // Token campo2=valor2
-        char *resto = strtok(NULL, " ");
-        if (resto != NULL && strlen(resto) > 0) {
-            strcat(valor1, " ");
-            strcat(valor1, resto);
+        token = strtok(NULL, " ");
+        if (token == NULL) {
+            printf("Registro inexistente.\n\n");
+            numBusca++;
+            continue;
         }
 
         // Processa campo2=valor2
         char campo2[50];
         char valor2[200];
 
-        igual_pos = strchr(resto, '=');
+        igual_pos = strchr(token, '=');
         if (igual_pos == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
@@ -707,24 +700,39 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         }
 
         // Extrai 'campo2'
-        campo_len = igual_pos - resto;
-        strncpy(campo2, resto, campo_len);
+        campo_len = igual_pos - token;
+        strncpy(campo2, token, campo_len);
         campo2[campo_len] = '\0';
 
         // Extrai 'valor2'
-        strcpy(valor2, igual_pos + 1);
+        strncpy(valor2, igual_pos + 1, sizeof(valor2) - 1);
+        valor2[sizeof(valor2) - 1] = '\0';
 
         // Trata valores com espaços (se houver mais tokens)
-        resto = strtok(NULL, "");
-        if (resto != NULL && strlen(resto) > 0) {
+        token = strtok(NULL, "");
+        if (token != NULL && strlen(token) > 0) {
             strcat(valor2, " ");
-            strcat(valor2, resto);
+            strcat(valor2, token);
         }
 
         // Limpa o valor (remove aspas e espaços extras)
-        char valor1_final[200], valor2_final[200];
-        scan_string_aspas(valor1_final, valor1);
-        scan_string_aspas(valor2_final, valor2);
+        char *valor1_final = valor1;
+        if(strcmp(campo1, "nomeUsuario") == 0 || strcmp(campo1, "nomePessoa") == 0) {
+            if(strcmp(valor1, "NULO") != 0) scan_string_aspas(valor1_final, valor1);
+            trimSemAloc(valor1_final);
+        } else if(strcmp(valor1, "NULO") != 0) {
+            scan_string_aspas(valor1_final, valor1);
+        }
+
+        char *valor2_final = valor2;
+        if(strcmp(campo2, "nomeUsuario") == 0 || strcmp(campo2, "nomePessoa") == 0) {
+            if(strcmp(valor2, "NULO") != 0) scan_string_aspas(valor2_final, valor2);
+            trimSemAloc(valor2_final);
+        } else if(strcmp(valor2, "NULO") != 0) {
+            scan_string_aspas(valor2_final, valor2);
+        }
+
+        //printf("%s: %s\n%s: %s\n", campo1, valor1_final, campo2, valor2_final);
 
         // 4. Executa a busca
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
@@ -742,6 +750,7 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
                 lerCabecIndice(indice_bin_file, &indice_header);
                 if(verificaStatusIndice(&indice_header) == 0) {
                     fclose(indice_bin_file);
+                    fclose(pessoa_bin_file);
                     liberarLista(lista_registros);
                     liberarAVL(arvoreIndice->raiz);
                     free(arvoreIndice);
@@ -756,10 +765,11 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
                 statusIndice(indice_bin_file, &indice_header, '1');
                 fclose(indice_bin_file);
             }
+
+            liberarLista(lista_registros); // liberar memória
         }
 
         // Atualizar contagem
-        liberarLista(lista_registros); // liberar memória
         numBusca++; // atualiza contagem de buscas
     }
 

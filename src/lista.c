@@ -160,10 +160,10 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
         // Atualiza os campos localmente e offset do registro atual
 
         atualRecord = atual->record;
-        if(atualRecord == NULL) continue;
+        if(atualRecord == NULL) {break;}
 
         atualRemovido = atualRecord->removido;
-        if(atualRemovido == REMOVIDO_CHAR) continue;
+        if(atualRemovido == REMOVIDO_CHAR) {atual = atual->prox; continue;}
 
         atualTamanhoRegistro = atualRecord->tamanhoRegistro;
         atualTamanhoNomePessoa = atualRecord->tamanhoNomePessoa;
@@ -205,7 +205,8 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 fwrite(&atualRecord->tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
                 fwrite(atualRecord->nomePessoa, sizeof(char), tamanhoValor2, pessoa_bin_file);
                 
-                for(int i = tamanhoValor2; i < atualTamanhoNomePessoa; i++) fputc(LIXO_CHAR, pessoa_bin_file);
+                int sobra = atualTamanhoNomePessoa - atualRecord->tamanhoNomePessoa;
+                for(int i = 0; i < sobra; i++) fputc(LIXO_CHAR, pessoa_bin_file);
 
             } else if (16 + tamanhoValor2 + atualTamanhoNomeUsuario > atualTamanhoRegistro && strcmp(valor2, "NULO") != 0) {
                 fseek(pessoa_bin_file, atualOffset, SEEK_SET); 
@@ -228,6 +229,10 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 escrevePessoaRecord(pessoa_bin_file, copiaRecord);
                 
                 atualizarNo(arvoreIndice, copiaRecord->idPessoa, copiaRecord->idPessoa, atualOffset);
+
+                if(copiaRecord->tamanhoNomePessoa != 0) free(copiaRecord->nomePessoa);
+                if(copiaRecord->tamanhoNomeUsuario != 0) free(copiaRecord->nomeUsuario);
+                free(copiaRecord);
             
             } else if (strcmp(valor2, "NULO") == 0) {
                 atualRecord->tamanhoNomePessoa = 0;
@@ -236,10 +241,19 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                     atualRecord->nomePessoa = NULL;
                 }
 
-                long int offsetLixo = sizeof(char) + 4*sizeof(int);
-                fseek(pessoa_bin_file, atualOffset + offsetLixo, SEEK_SET);
-                for(int i = 0; i < atualTamanhoNomePessoa; i++) fputc(LIXO_CHAR, pessoa_bin_file);
-            
+                // atualiza tamanho registro
+                atualRecord->tamanhoRegistro = 16 + atualTamanhoNomeUsuario;
+
+                // reescreve os campos seguintes da atualização
+                long int tempOffset = sizeof(char) + 3*sizeof(int);
+                fseek(pessoa_bin_file, atualOffset + tempOffset, SEEK_SET);
+                fwrite(&atualRecord->tamanhoNomePessoa, sizeof(int), 1, pessoa_bin_file);
+                fwrite(&atualRecord->tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+                if(atualTamanhoNomeUsuario > 0) fwrite(atualRecord->nomeUsuario, sizeof(char), atualTamanhoNomeUsuario, pessoa_bin_file);
+                
+                int sobra = atualTamanhoRegistro - atualRecord->tamanhoRegistro;
+                for(int i = 0; i < sobra; i++) fputc(LIXO_CHAR, pessoa_bin_file);
+
             }
 
         } else if (strcmp(campo2, "nomeUsuario") == 0) {
@@ -249,13 +263,14 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 strcpy(atualRecord->nomeUsuario, valor2);
                 atualRecord->tamanhoNomeUsuario = tamanhoValor2;
 
-                long int offsetEscrita = sizeof(char) + 4*sizeof(int);
+                long int offsetEscrita = sizeof(char) + 5*sizeof(int);
                 if (atualTamanhoNomePessoa > 0) offsetEscrita += atualTamanhoNomePessoa;
                 fseek(pessoa_bin_file, atualOffset + offsetEscrita, SEEK_SET);
                 fwrite(&atualRecord->tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
-                fwrite(atualRecord->nomeUsuario, sizeof(char), tamanhoValor2, pessoa_bin_file);
-                
-                for(int i = tamanhoValor2; i < atualTamanhoNomeUsuario; i++) fputc(LIXO_CHAR, pessoa_bin_file);
+                fwrite(atualRecord->nomeUsuario, sizeof(char), atualRecord->tamanhoNomeUsuario, pessoa_bin_file);
+
+                int sobra = atualTamanhoNomeUsuario - atualRecord->tamanhoNomeUsuario;
+                for(int i = 0; i < sobra; i++) fputc(LIXO_CHAR, pessoa_bin_file);
 
             } else if (16 + tamanhoValor2 + atualTamanhoNomePessoa > atualTamanhoRegistro && strcmp(valor2, "NULO") != 0) {
                 fseek(pessoa_bin_file, atualOffset, SEEK_SET);
@@ -278,7 +293,11 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                 escrevePessoaRecord(pessoa_bin_file, copiaRecord);
 
                 atualizarNo(arvoreIndice, copiaRecord->idPessoa, copiaRecord->idPessoa, atualOffset);
-            
+                
+                if(copiaRecord->tamanhoNomePessoa != 0) free(copiaRecord->nomePessoa);
+                if(copiaRecord->tamanhoNomeUsuario != 0) free(copiaRecord->nomeUsuario);
+                free(copiaRecord);
+
             } else if (strcmp(valor2, "NULO") == 0) {
                 atualRecord->tamanhoNomeUsuario = 0;
                 if (atualRecord->nomeUsuario != NULL) {
@@ -286,10 +305,16 @@ int atualizaPessoa(FILE *pessoa_bin_file, ARV *arvoreIndice, Lista *lista, char 
                     atualRecord->nomeUsuario = NULL;
                 }
 
-                long int offsetLixo = sizeof(char) + 4*sizeof(int);
-                if(atualTamanhoNomePessoa > 0) offsetLixo += atualTamanhoNomePessoa;
-                fseek(pessoa_bin_file, atualOffset + offsetLixo,SEEK_SET);
-                for(int i = 0; i < atualTamanhoNomeUsuario; i++) fputc(LIXO_CHAR, pessoa_bin_file);
+                // atualiza tamanho registro
+                atualRecord->tamanhoRegistro = 16 + atualTamanhoNomePessoa;
+
+                long int tempOffset = sizeof(char) + 4*sizeof(int);
+                if(atualTamanhoNomePessoa > 0) tempOffset += atualTamanhoNomePessoa;
+                fseek(pessoa_bin_file, atualOffset + tempOffset, SEEK_SET);
+                fwrite(&atualRecord->tamanhoNomeUsuario, sizeof(int), 1, pessoa_bin_file);
+
+                int sobra = atualTamanhoRegistro - atualRecord->tamanhoRegistro;
+                for(int i = 0; i < sobra; i++) fputc(LIXO_CHAR, pessoa_bin_file);
             
             }
         }

@@ -99,3 +99,27 @@ char *trim(char *str) {
     return new_str; // Retorna a nova string limpa
 }
 
+
+/*
+Função auxiliar para remover caracteres especiais (espaço, \n, \r, \t) do 
+final de uma string e alocar uma nova string.
+@param str: String fixa a ser limpa.
+*/
+void trimSemAloc(char *str) {
+    char *inicio = str;
+    while (*inicio == ' ' || *inicio == '\n' || *inicio == '\r' || *inicio == '\t') {
+        inicio++;
+    }
+    
+    int n = strlen(inicio);
+    while (n > 0 && (inicio[n-1] == ' ' || inicio[n-1] == '\n' || 
+                     inicio[n-1] == '\r' || inicio[n-1] == '\t')) {
+        n--;
+    }
+    
+    // Move o conteúdo para o início se necessário
+    if (inicio != str) {
+        memmove(str, inicio, n);
+    }
+    str[n] = '\0';
+}
