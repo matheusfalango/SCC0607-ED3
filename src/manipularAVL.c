@@ -34,20 +34,19 @@ Função para atualizar um nó da Árvore AVL.
 @param id: ID do registro a ser atualizado (chave primária).
 @param offset: Novo Byte Offset do registro no arquivo de dados.
 */
-void atualizarNo(ARV* arv, int idAntigo, int idAtual, long int offsetAtual) {
+void atualizarNo(ARV* arv, int idAntigo, int idAtual, long int atualOffset) {
 		if(arv == NULL) return;
 
+		NO* encontrado = buscarNo(arv, idAntigo);
+
 		if(idAntigo != idAtual) {
-			removeNoAVL(arv, idAntigo);
-			insereNoAVL(arv, idAtual, offsetAtual);
-
+			removerNo(arv, idAntigo);
+			insereNo(arv, idAtual, atualOffset);
 		} else {
-			NO* noEncontrado = buscarNo(arv, idAntigo);
-			if(noEncontrado != NULL) {
-				noEncontrado->bOffset = offsetAtual;
-			}
-
+			encontrado->bOffset = atualOffset;
 		}
+
+		return;
 }
 
 /*

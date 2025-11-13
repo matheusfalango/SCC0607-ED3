@@ -404,6 +404,7 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
             fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET);
             deletarPessoaDaLista(pessoa_bin_file, arvoreIndice, lista_registros);
             pessoa_header.quantidadeRemovidos += lista_registros->tamanho; // atualiza tamanho da qtd de removidos
+            pessoa_header.quantidadePessoas = pessoa_header.quantidadePessoas - lista_registros->tamanho;
         }
 
         liberarLista(lista_registros); // liberar memória
@@ -426,7 +427,6 @@ void deletarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, i
     fclose(indice_bin_file);
 
     // 8. Atualizar cabeçalho da qtd de removidos no arquivo pessoa
-    pessoa_header.quantidadePessoas = pessoa_header.quantidadePessoas - pessoa_header.quantidadeRemovidos;
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);
 
     // 9. Libera memória
@@ -661,7 +661,6 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         // Processa campo1=valor1
         char campo1[50];
         char valor1[200];
-
         char *igual_pos = strchr(token, '=');
         if (igual_pos == NULL) {
             printf("Registro inexistente.\n\n");
@@ -676,13 +675,11 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
 
         // Extrai 'valor1'
         char *inicio_valor1 = igual_pos + 1;
-        int valor1_len = strlen(inicio_valor1);
-        strncpy(valor1, inicio_valor1, valor1_len);
-        valor1[valor1_len] = '\0';
+        strcpy(valor1, inicio_valor1);
 
-        // Token campo2=valor2
-        token = strtok(NULL, " ");
-        if (token == NULL) {
+        // Pega o resto da linha para campo2=valor2
+        char *resto = strtok(NULL, "");
+        if (resto == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
             continue;
@@ -691,8 +688,7 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         // Processa campo2=valor2
         char campo2[50];
         char valor2[200];
-
-        igual_pos = strchr(token, '=');
+        igual_pos = strchr(resto, '=');
         if (igual_pos == NULL) {
             printf("Registro inexistente.\n\n");
             numBusca++;
@@ -700,20 +696,12 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         }
 
         // Extrai 'campo2'
-        campo_len = igual_pos - token;
-        strncpy(campo2, token, campo_len);
+        campo_len = igual_pos - resto;
+        strncpy(campo2, resto, campo_len);
         campo2[campo_len] = '\0';
 
         // Extrai 'valor2'
-        strncpy(valor2, igual_pos + 1, sizeof(valor2) - 1);
-        valor2[sizeof(valor2) - 1] = '\0';
-
-        // Trata valores com espaços (se houver mais tokens)
-        token = strtok(NULL, "");
-        if (token != NULL && strlen(token) > 0) {
-            strcat(valor2, " ");
-            strcat(valor2, token);
-        }
+        strcpy(valor2, igual_pos + 1);
 
         // Limpa o valor (remove aspas e espaços extras)
         char *valor1_final = valor1;
@@ -732,8 +720,6 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
             scan_string_aspas(valor2_final, valor2);
         }
 
-        //printf("%s: %s\n%s: %s\n", campo1, valor1_final, campo2, valor2_final);
-
         // 4. Executa a busca
         fseek(pessoa_bin_file, PESSOA_HEADER_SIZE, SEEK_SET); // pula cabeçalho
         Lista *lista_registros = buscaPessoa(pessoa_bin_file, arvoreIndice, campo1, valor1_final);
@@ -742,28 +728,6 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
             if(lista_registros->tamanho > 0) {
                 // atualizar os registros encontrados na arvore
                 pessoa_header.quantidadeRemovidos += atualizaPessoa(pessoa_bin_file, arvoreIndice, lista_registros, campo2, valor2_final);            
-                // Reescrever o indice
-                indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
-                if (indice_bin_file == NULL) return;
-
-                IndexHeader indice_header;
-                lerCabecIndice(indice_bin_file, &indice_header);
-                if(verificaStatusIndice(&indice_header) == 0) {
-                    fclose(indice_bin_file);
-                    fclose(pessoa_bin_file);
-                    liberarLista(lista_registros);
-                    liberarAVL(arvoreIndice->raiz);
-                    free(arvoreIndice);
-                    return;
-                }
-
-                statusIndice(indice_bin_file, &indice_header, '0');
-
-                fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
-                printCrescIndice(arvoreIndice->raiz, indice_bin_file);
-
-                statusIndice(indice_bin_file, &indice_header, '1');
-                fclose(indice_bin_file);
             }
 
             liberarLista(lista_registros); // liberar memória
@@ -772,6 +736,28 @@ void atualizarRegistros(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin,
         // Atualizar contagem
         numBusca++; // atualiza contagem de buscas
     }
+
+    // Reescrever o indice
+    indice_bin_file = abrirIndice(arquivoIndicePrimarioBin, "r+b"); // leitura e escrita
+    if (indice_bin_file == NULL) return;
+
+    IndexHeader indice_header;
+    lerCabecIndice(indice_bin_file, &indice_header);
+    if(verificaStatusIndice(&indice_header) == 0) {
+        fclose(indice_bin_file);
+        fclose(pessoa_bin_file);
+        liberarAVL(arvoreIndice->raiz);
+        free(arvoreIndice);
+        return;
+    }
+
+    statusIndice(indice_bin_file, &indice_header, '0');
+
+    fseek(indice_bin_file, INDEX_HEADER_SIZE, SEEK_SET);
+    printCrescIndice(arvoreIndice->raiz, indice_bin_file);
+
+    statusIndice(indice_bin_file, &indice_header, '1');
+    fclose(indice_bin_file);
 
     // 5. Atualiza cabeçalho
     atualizaCabecPessoa(pessoa_bin_file, &pessoa_header);

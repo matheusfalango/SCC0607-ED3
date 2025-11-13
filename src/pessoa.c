@@ -231,6 +231,10 @@ PessoaRecord *lerRegistroPessoa(FILE *pessoa_bin_file) {
             fread(pessoa_record->nomeUsuario, sizeof(char), pessoa_record->tamanhoNomeUsuario, pessoa_bin_file);
             pessoa_record->nomeUsuario[pessoa_record->tamanhoNomeUsuario] = '\0';
         }
+
+        // pular lixo
+        fseek(pessoa_bin_file, atual_byte_offset + pessoa_record->tamanhoRegistro + sizeof(char) + sizeof(int), SEEK_SET);
+
     } else {
         // Registro removido, pula
         int tamanhoRegistro;

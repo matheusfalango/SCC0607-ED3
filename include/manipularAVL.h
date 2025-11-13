@@ -17,7 +17,7 @@ void insereNoAVL(ARV* arv, int id, long int bOffset);
 void removeNoAVL(ARV* arv, int id);
 
 // Função para atualizar um nó da AVL.
-void atualizarNo(ARV* arv, int idAntigo, int idAtual, long int offsetAtual);
+void atualizarNo(ARV* arv, int idAntigo, int idAtual, long int atualOffset);
 
 // Percorre a AVL em ordem crescente (inorder) e escreve os índices no arquivo binário.
 void printCrescIndice(NO* raiz, FILE* indice_bin_file);
