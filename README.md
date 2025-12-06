@@ -1,4 +1,4 @@
-# Trabalho Introdutório - Organização de Arquivos (SCC0215)
+# Trabalho Introdutório - Organização de Arquivos (SCC0607)
 
 Este documento descreve a implementação de um programa em C para gerenciar arquivos de dados e índices primários, conforme as especificações do trabalho introdutório da disciplina de Organização de Arquivos (SCC0215) da USP.
 
