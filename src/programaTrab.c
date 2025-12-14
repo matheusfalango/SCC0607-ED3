@@ -1043,7 +1043,6 @@ void criarGrafoDirecionado(char *arquivoPessoa, char *arquivoIndexaPessoa, char 
     Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 0);
     
     if (grafo == NULL) {
-        printf("Falha na execução da funcionalidade.\n");
         return;
     }
     
