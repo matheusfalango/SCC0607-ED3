@@ -1032,3 +1032,284 @@ void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, 
     fclose(segue_bin_file);
 }
 
+/*
+Funcionalidade 11: Criar grafo direcionado (lista de adjacências).
+Representa quem segue quem (nomeUsuarioQueSegue -> nomeUsuarioQueESeguida).
+@param arquivoPessoa: Nome do arquivo binário de pessoas.
+@param arquivoIndexaPessoa: Nome do arquivo binário de índice.
+@param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
+*/
+void criarGrafoDirecionado(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado) {
+    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 0);
+    
+    if (grafo == NULL) {
+        printf("Falha na execução da funcionalidade.\n");
+        return;
+    }
+    
+    // Imprimir grafo
+    imprimirGrafo(grafo);
+    
+    // Liberar memória
+    liberarGrafo(grafo);
+}
+
+/*
+Funcionalidade 12: Criar grafo transposto.
+Inverte as arestas do grafo (nomeUsuarioQueESeguida -> nomeUsuarioQueSegue).
+@param arquivoPessoa: Nome do arquivo binário de pessoas.
+@param arquivoIndexaPessoa: Nome do arquivo binário de índice.
+@param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
+*/
+void criarGrafoTransposto(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado) {
+    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 1);
+    
+    if (grafo == NULL) {
+        return;
+    }
+    
+    // Imprimir grafo
+    imprimirGrafo(grafo);
+    
+    // Liberar memória
+    liberarGrafo(grafo);
+}
+
+
+/*
+Funcionalidade 13: Caminho mais curto até celebridade (BFS).
+Determina o caminho mais curto de cada pessoa até uma celebridade específica.
+Apenas pessoas que ainda seguem a celebridade são consideradas (dataFim == NULO).
+Apenas o primeiro caminho encontrado é listado.
+@param arquivoPessoa: Nome do arquivo binário de pessoas.
+@param arquivoIndexaPessoa: Nome do arquivo binário de índice.
+@param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
+@param nomeUsuarioCelebridade: Nome da celebridade (entre aspas).
+*/
+void caminhoParaCelebridade(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado, char *nomeUsuarioCelebridade) {
+    // Construir grafo normal
+    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 0);
+    if (grafo == NULL) {
+        return;
+    }
+    
+    // Remover aspas do nome da celebridade
+    char nomeCelebridade[256];
+    scan_string_aspas(nomeCelebridade, nomeUsuarioCelebridade);
+    
+    // Buscar índice da celebridade
+    int indiceCelebridade = buscarVertice(grafo, nomeCelebridade);
+    if (indiceCelebridade == -1) {
+        liberarGrafo(grafo);
+        return;
+    }
+    
+    // Para cada vértice, executar BFS até a celebridade
+    for (int i = 0; i < grafo->numVertices; i++) {
+        if (i == indiceCelebridade) continue; // Pular a própria celebridade
+        
+        // Arrays de controle do BFS
+        int *visitado = (int*)calloc(grafo->numVertices, sizeof(int));
+        int *predecessor = (int*)malloc(grafo->numVertices * sizeof(int));
+        Aresta **arestaUsada = (Aresta**)malloc(grafo->numVertices * sizeof(Aresta*));
+        
+        for (int j = 0; j < grafo->numVertices; j++) {
+            predecessor[j] = -1;
+            arestaUsada[j] = NULL;
+        }
+        
+        // BFS
+        Fila *fila = criarFila();
+        enfileirar(fila, i);
+        visitado[i] = 1;
+        
+        int encontrou = 0;
+        while (!filaVazia(fila) && !encontrou) {
+            int atual = desenfileirar(fila);
+            
+            // Percorrer arestas adjacentes
+            Aresta *aresta = grafo->vertices[atual].listaArestas;
+            
+            while (aresta != NULL && !encontrou) {
+                // Verificar se ainda segue (dataFim == NULO)
+                int aindaSegue = 0;
+                
+                if (strcmp(aresta->dataFim, "NULO") == 0) {
+                    aindaSegue = 1;
+                } else if (aresta->dataFim[0] == LIXO_CHAR) {
+                    aindaSegue = 1;
+                }
+                
+                if (!aindaSegue) {
+                    aresta = aresta->prox;
+                    continue;
+                }
+                
+                int indiceDestino = buscarVertice(grafo, aresta->nomeUsuario);
+                
+                // Se este destino ainda não foi visitado, processar
+                if (indiceDestino != -1 && !visitado[indiceDestino]) {
+                    visitado[indiceDestino] = 1;
+                    predecessor[indiceDestino] = atual;
+                    arestaUsada[indiceDestino] = aresta;
+                    enfileirar(fila, indiceDestino);
+                    
+                    // Se encontrou a celebridade, parar imediatamente
+                    if (indiceDestino == indiceCelebridade) {
+                        encontrou = 1;
+                        break;
+                    }
+                }
+                
+                aresta = aresta->prox;
+            }
+        }
+        
+        liberarFila(fila);
+        
+        // Se encontrou caminho, reconstruir e imprimir
+        if (encontrou) {
+            // Reconstruir caminho
+            int *caminho = (int*)malloc(grafo->numVertices * sizeof(int));
+            Aresta **arestasCaminho = (Aresta**)malloc(grafo->numVertices * sizeof(Aresta*));
+            int tamanhoCaminho = 0;
+            
+            int atual = indiceCelebridade;
+            while (atual != i) {
+                caminho[tamanhoCaminho] = atual;
+                arestasCaminho[tamanhoCaminho] = arestaUsada[atual];
+                tamanhoCaminho++;
+                atual = predecessor[atual];
+            }
+            caminho[tamanhoCaminho] = i;
+            tamanhoCaminho++;
+            
+            // Imprimir caminho (da pessoa até a celebridade)
+            for (int k = tamanhoCaminho - 1; k > 0; k--) {
+                printf("%s, ", grafo->vertices[caminho[k]].nomeUsuario);
+                printf("%s, ", grafo->vertices[caminho[k-1]].nomeUsuario);
+                
+                Aresta *a = arestasCaminho[k-1];
+                
+                printf("%s, ", a->dataInicio);
+                printf("%s, ", a->dataFim);
+                
+                if (a->grauAmizade == LIXO_CHAR) {
+                    printf("NULO\n");
+                } else {
+                    printf("%c\n", a->grauAmizade);
+                }
+            }
+            
+            printf("\n");
+            
+            free(caminho);
+            free(arestasCaminho);
+        } else {
+            // Não segue a celebridade
+            printf("NAO SEGUE A CELEBRIDADE\n\n");
+        }
+        
+        free(visitado);
+        free(predecessor);
+        free(arestaUsada);
+    }
+    
+    // Liberar memória
+    liberarGrafo(grafo);
+}
+
+
+/*
+Funcionalidade 14: Comprimento do ciclo da fofoca (BFS).
+Determina o comprimento do caminho para que a fofoca retorne à pessoa que a gerou.
+@param arquivoPessoa: Nome do arquivo binário de pessoas.
+@param arquivoIndexaPessoa: Nome do arquivo binário de índice.
+@param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
+@param nomeUsuarioFofoca: Nome da pessoa que gerou a fofoca (entre aspas).
+*/
+void comprimentoCicloFofoca(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado, char *nomeUsuarioFofoca) {
+    // Construir grafo normal
+    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 0);
+    
+    if (grafo == NULL) {
+        return;
+    }
+    
+    // Remover aspas do nome
+    char nomeFofoca[256];
+    scan_string_aspas(nomeFofoca, nomeUsuarioFofoca);
+    
+    // Buscar índice da pessoa
+    int indiceFofoca = buscarVertice(grafo, nomeFofoca);
+    if (indiceFofoca == -1) {
+        liberarGrafo(grafo);
+        printf("Falha na execução da funcionalidade.\n");
+        return;
+    }
+    
+    // Arrays de controle do BFS
+    int *visitado = (int*)calloc(grafo->numVertices, sizeof(int));
+    int *distancia = (int*)malloc(grafo->numVertices * sizeof(int));
+    
+    for (int j = 0; j < grafo->numVertices; j++) {
+        distancia[j] = -1;
+    }
+    
+    // BFS a partir dos vizinhos da pessoa (não da própria pessoa)
+    Fila *fila = criarFila();
+    
+    // Enfileirar vizinhos diretos (quem a pessoa segue)
+    Aresta *aresta = grafo->vertices[indiceFofoca].listaArestas;
+    while (aresta != NULL) {
+        int indiceDestino = buscarVertice(grafo, aresta->nomeUsuario);
+        if (indiceDestino != -1 && !visitado[indiceDestino]) {
+            visitado[indiceDestino] = 1;
+            distancia[indiceDestino] = 1;
+            enfileirar(fila, indiceDestino);
+        }
+        aresta = aresta->prox;
+    }
+    
+    int encontrou = 0;
+    int comprimentoCiclo = -1;
+    
+    while (!filaVazia(fila) && !encontrou) {
+        int atual = desenfileirar(fila);
+        
+        // Percorrer arestas adjacentes em ordem alfabética
+        Aresta *arestaAtual = grafo->vertices[atual].listaArestas;
+        while (arestaAtual != NULL) {
+            int indiceDestino = buscarVertice(grafo, arestaAtual->nomeUsuario);
+            
+            // Se voltou para a pessoa original, encontrou o ciclo
+            if (indiceDestino == indiceFofoca) {
+                comprimentoCiclo = distancia[atual] + 1;
+                encontrou = 1;
+                break;
+            }
+            
+            if (indiceDestino != -1 && !visitado[indiceDestino]) {
+                visitado[indiceDestino] = 1;
+                distancia[indiceDestino] = distancia[atual] + 1;
+                enfileirar(fila, indiceDestino);
+            }
+            
+            arestaAtual = arestaAtual->prox;
+        }
+    }
+    
+    liberarFila(fila);
+    free(visitado);
+    free(distancia);
+    
+    // Imprimir resultado
+    if (encontrou) {
+        printf("%d\n", comprimentoCiclo);
+    } else {
+        printf("A FOFOCA NAO RETORNOU\n");
+    }
+    
+    // Liberar memória
+    liberarGrafo(grafo);
+}

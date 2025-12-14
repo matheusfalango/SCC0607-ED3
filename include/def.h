@@ -15,6 +15,7 @@ Biblioteca que possui todas as definições necessárias para o arquivo principa
 #include "indice.h"
 #include "pessoa.h"
 #include "segue.h"
+#include "grafo.h"
 
 // ===============================================================================
 // DEFINIÇÕES - GERAIS

@@ -86,6 +86,10 @@ void buscarPessoaEmSegue(Lista *lista_registros, SegueRecord *segue_record, int 
 //Escreve os dados de um registro de segue no formato exigido no terminal.
 void printNaTelaSegue(SegueRecord segue_record);
 
+//Implementação de lerRegistroSegue: Lê um registro do arquivo segue
+//Leitura de um registro do arquivo segue para a memória
+void lerRegistroSegue(FILE *segue_bin_file, SegueRecord *segue_record);
+
 //Implementação de buscaBinariaIdPessoaQueSegue: Busca Binária por idPessoaQueSegue no Arquivo Segue em memória no vetor ordenado
 //Busca binária por idPessoaQueSegue no arquivo segue ordenado em memoria no vetor
 //e retorna a quantidade de registros encontrados com o idPessoaQueSegue igual ao idPessoaProcurado

@@ -241,6 +241,25 @@ void printNaTelaSegue(SegueRecord segue_record) {
 
 }
 
+
+/*
+Implementação de lerRegistroSegue: Lê um registro do arquivo segue após o campo removido
+Leitura de um registro do arquivo segue para a memória
+@param segue_bin_file: Arquivo de registros Segue.
+@param segue_record: Ponteiro para o registro em memória do arquivo segue.
+*/
+void lerRegistroSegue(FILE *segue_bin_file, SegueRecord *segue_record) {
+    
+    fread(&segue_record->idPessoaQueSegue, sizeof(int), 1, segue_bin_file);
+    fread(&segue_record->idPessoaQueESeguida, sizeof(int), 1, segue_bin_file);
+    fread(segue_record->dataInicioQueSegue, sizeof(char), 10, segue_bin_file);
+    segue_record->dataInicioQueSegue[10] = '\0';
+    fread(segue_record->dataFimQueSegue, sizeof(char), 10, segue_bin_file);
+    segue_record->dataFimQueSegue[10] = '\0';
+    fread(&segue_record->grauAmizade, sizeof(char), 1, segue_bin_file);
+}
+
+
 /*Implementação de buscaBinariaIdPessoaQueSegue: Busca Binária por idPessoaQueSegue no Arquivo Segue
 Busca binária por idPessoaQueSegue no arquivo segue ordenado 
 e retorna a quantidade de registros encontrados com o idPessoaQueSegue igual ao idPessoaProcurado

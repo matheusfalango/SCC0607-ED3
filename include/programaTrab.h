@@ -68,4 +68,26 @@ void ordenarArquivoSegue(char *arquivoSegueDesordenado, char *arquivoSegueOrdena
 void juncaoPessoaSegue(char *arquivoEntradaBin, char *arquivoIndicePrimarioBin, char *arquivoSegueOrdenado, int qtdBusca);
 
 
+// ===============================================================================
+// FUNCIONALIDADES PRINCIPAIS - TRABALHO 2
+// ===============================================================================
+
+// Funcionalidade 11: Criar grafo direcionado (lista de adjacências)
+// Representa quem segue quem (nomeUsuarioQueSegue -> nomeUsuarioQueESeguida)
+void criarGrafoDirecionado(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado);
+
+// Funcionalidade 12: Criar grafo transposto
+// Inverte as arestas do grafo (nomeUsuarioQueESeguida -> nomeUsuarioQueSegue)
+void criarGrafoTransposto(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado);
+
+// Funcionalidade 13: Caminho mais curto até celebridade (BFS)
+// Determina o caminho mais curto de cada pessoa até uma celebridade específica
+void caminhoParaCelebridade(char *arquivoPessoa, char *arquivoIndexaPessoa, 
+                           char *arquivoSegueOrdenado, char *nomeUsuarioCelebridade);
+
+// Funcionalidade 14: Comprimento do ciclo da fofoca (BFS)
+// Determina o comprimento do caminho para que a fofoca retorne à pessoa que a gerou
+void comprimentoCicloFofoca(char *arquivoPessoa, char *arquivoIndexaPessoa, 
+                           char *arquivoSegueOrdenado, char *nomeUsuarioFofoca);
+
 #endif

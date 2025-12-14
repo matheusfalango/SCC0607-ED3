@@ -94,6 +94,26 @@ int main() {
         juncaoPessoaSegue(argv[1], argv[2], argv[3], atoi(argv[4]));
         break;
 
+        case 11:
+        // Argumentos: 11 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin]
+        criarGrafoDirecionado(argv[1], argv[2], argv[3]);
+        break;
+
+        case 12:
+        // Argumentos: 12 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin]
+        criarGrafoTransposto(argv[1], argv[2], argv[3]);
+        break;
+
+        case 13:
+        // Argumentos: 13 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin] [nome_usuario_origem]
+        caminhoParaCelebridade(argv[1], argv[2], argv[3], argv[4]);
+        break;
+
+        case 14:
+        // Argumentos: 14 [arquivo_dados_bin] [arquivo_indice_bin] [arquivo_segue_ordenado_bin] [nome_usuario_origem]
+        comprimentoCicloFofoca(argv[1], argv[2], argv[3], argv[4]);
+        break;
+
         default:
         printf("Funcionalidade inválida!\n");
         return EXIT_FAILURE;
