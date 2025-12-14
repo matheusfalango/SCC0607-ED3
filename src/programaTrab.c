@@ -1076,18 +1076,19 @@ void criarGrafoTransposto(char *arquivoPessoa, char *arquivoIndexaPessoa, char *
 
 
 /*
-Funcionalidade 13: Caminho mais curto até celebridade (BFS).
+Funcionalidade 13: Caminho mais curto até celebridade (BFS OTIMIZADA com Grafo Transposto).
 Determina o caminho mais curto de cada pessoa até uma celebridade específica.
-Apenas pessoas que ainda seguem a celebridade são consideradas (dataFim == NULO).
-Apenas o primeiro caminho encontrado é listado.
+Apenas pessoas que ainda seguem a celebridade são consideradas (dataFim == NULO ou LIXO_CHAR).
+Apenas o primeiro caminho encontrado (baseado na ordem de desempate do grafo transposto) é listado.
 @param arquivoPessoa: Nome do arquivo binário de pessoas.
 @param arquivoIndexaPessoa: Nome do arquivo binário de índice.
 @param arquivoSegueOrdenado: Nome do arquivo binário de segue ordenado.
 @param nomeUsuarioCelebridade: Nome da celebridade (entre aspas).
 */
 void caminhoParaCelebridade(char *arquivoPessoa, char *arquivoIndexaPessoa, char *arquivoSegueOrdenado, char *nomeUsuarioCelebridade) {
-    // Construir grafo normal
-    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 0);
+    // 1. Construir Grafo Transposto (flag 1)
+    // Se A segue B, no transposto, B (seguido) tem aresta para A (seguidor).
+    Grafo *grafo = construirGrafo(arquivoPessoa, arquivoIndexaPessoa, arquivoSegueOrdenado, 1);
     if (grafo == NULL) {
         return;
     }
@@ -1103,121 +1104,117 @@ void caminhoParaCelebridade(char *arquivoPessoa, char *arquivoIndexaPessoa, char
         return;
     }
     
-    // Para cada vértice, executar BFS até a celebridade
+    // Arrays de controle do BFS
+    // O vetor 'pai' (predecessor) armazena o *próximo passo* no caminho inverso (transposto).
+    // Ex: Caminho original A -> B -> C.
+    // BFS no transposto: C -> B -> A.
+    // predecessor[B] = C, predecessor[A] = B.
+    int *distancia = (int*)malloc(grafo->numVertices * sizeof(int));
+    int *predecessor = (int*)malloc(grafo->numVertices * sizeof(int));
+    // arestaUsada armazena a aresta real no G^T: arestaUsada[u] é a aresta (predecessor[u] -> u) em G^T.
+    Aresta **arestaUsada = (Aresta**)malloc(grafo->numVertices * sizeof(Aresta*)); 
+    
+    for (int j = 0; j < grafo->numVertices; j++) {
+        distancia[j] = -1; // -1 = Não visitado / Distância infinita
+        predecessor[j] = -1;
+        arestaUsada[j] = NULL;
+    }
+    
+    // 2. BFS Única a partir da Celebridade (no Grafo Transposto)
+    Fila *fila = criarFila();
+    enfileirar(fila, indiceCelebridade);
+    distancia[indiceCelebridade] = 0;
+    
+    while (!filaVazia(fila)) {
+        int atual = desenfileirar(fila);
+        
+        // Percorrer arestas adjacentes do transposto
+        // Aresta (atual -> seguidor) no transposto corresponde a (seguidor -> atual) no original.
+        Aresta *aresta = grafo->vertices[atual].listaArestas;
+        
+        while (aresta != NULL) {
+            // Verificar se ainda segue (dataFim == NULO ou LIXO_CHAR)
+            int aindaSegue = 0;
+            
+            // Verifica dataFim == "NULO" (string) ou dataFim[0] == LIXO_CHAR
+            if (strcmp(aresta->dataFim, "NULO") == 0) {
+                aindaSegue = 1;
+            } else if (aresta->dataFim[0] == LIXO_CHAR) {
+                aindaSegue = 1;
+            }
+            
+            if (!aindaSegue) {
+                aresta = aresta->prox;
+                continue;
+            }
+            
+            int indiceDestino = buscarVertice(grafo, aresta->nomeUsuario);
+            
+            // Se este destino (seguidor) ainda não foi visitado, processar
+            if (indiceDestino != -1 && distancia[indiceDestino] == -1) {
+                distancia[indiceDestino] = distancia[atual] + 1;
+                predecessor[indiceDestino] = atual;
+                arestaUsada[indiceDestino] = aresta; // Armazena a aresta (atual -> destino) em G^T
+                enfileirar(fila, indiceDestino);
+            }
+            
+            aresta = aresta->prox;
+        }
+    }
+    
+    liberarFila(fila);
+    
+    // 3. Imprimir os caminhos para todos os vértices (em ordem alfabética)
+    // A ordem alfabética é garantida pela ordem dos vértices no vetor grafo->vertices
     for (int i = 0; i < grafo->numVertices; i++) {
         if (i == indiceCelebridade) continue; // Pular a própria celebridade
         
-        // Arrays de controle do BFS
-        int *visitado = (int*)calloc(grafo->numVertices, sizeof(int));
-        int *predecessor = (int*)malloc(grafo->numVertices * sizeof(int));
-        Aresta **arestaUsada = (Aresta**)malloc(grafo->numVertices * sizeof(Aresta*));
-        
-        for (int j = 0; j < grafo->numVertices; j++) {
-            predecessor[j] = -1;
-            arestaUsada[j] = NULL;
-        }
-        
-        // BFS
-        Fila *fila = criarFila();
-        enfileirar(fila, i);
-        visitado[i] = 1;
-        
-        int encontrou = 0;
-        while (!filaVazia(fila) && !encontrou) {
-            int atual = desenfileirar(fila);
-            
-            // Percorrer arestas adjacentes
-            Aresta *aresta = grafo->vertices[atual].listaArestas;
-            
-            while (aresta != NULL && !encontrou) {
-                // Verificar se ainda segue (dataFim == NULO)
-                int aindaSegue = 0;
-                
-                if (strcmp(aresta->dataFim, "NULO") == 0) {
-                    aindaSegue = 1;
-                } else if (aresta->dataFim[0] == LIXO_CHAR) {
-                    aindaSegue = 1;
-                }
-                
-                if (!aindaSegue) {
-                    aresta = aresta->prox;
-                    continue;
-                }
-                
-                int indiceDestino = buscarVertice(grafo, aresta->nomeUsuario);
-                
-                // Se este destino ainda não foi visitado, processar
-                if (indiceDestino != -1 && !visitado[indiceDestino]) {
-                    visitado[indiceDestino] = 1;
-                    predecessor[indiceDestino] = atual;
-                    arestaUsada[indiceDestino] = aresta;
-                    enfileirar(fila, indiceDestino);
-                    
-                    // Se encontrou a celebridade, parar imediatamente
-                    if (indiceDestino == indiceCelebridade) {
-                        encontrou = 1;
-                        break;
-                    }
-                }
-                
-                aresta = aresta->prox;
-            }
-        }
-        
-        liberarFila(fila);
-        
-        // Se encontrou caminho, reconstruir e imprimir
-        if (encontrou) {
-            // Reconstruir caminho
-            int *caminho = (int*)malloc(grafo->numVertices * sizeof(int));
-            Aresta **arestasCaminho = (Aresta**)malloc(grafo->numVertices * sizeof(Aresta*));
-            int tamanhoCaminho = 0;
-            
-            int atual = indiceCelebridade;
-            while (atual != i) {
-                caminho[tamanhoCaminho] = atual;
-                arestasCaminho[tamanhoCaminho] = arestaUsada[atual];
-                tamanhoCaminho++;
-                atual = predecessor[atual];
-            }
-            caminho[tamanhoCaminho] = i;
-            tamanhoCaminho++;
-            
-            // Imprimir caminho (da pessoa até a celebridade)
-            for (int k = tamanhoCaminho - 1; k > 0; k--) {
-                printf("%s, ", grafo->vertices[caminho[k]].nomeUsuario);
-                printf("%s, ", grafo->vertices[caminho[k-1]].nomeUsuario);
-                
-                Aresta *a = arestasCaminho[k-1];
-                
-                printf("%s, ", a->dataInicio);
-                printf("%s, ", a->dataFim);
-                
-                if (a->grauAmizade == LIXO_CHAR) {
-                    printf("NULO\n");
-                } else {
-                    printf("%c\n", a->grauAmizade);
-                }
-            }
-            
-            printf("\n");
-            
-            free(caminho);
-            free(arestasCaminho);
-        } else {
-            // Não segue a celebridade
+        // Se a distância é -1, não há caminho.
+        if (distancia[i] == -1) {
             printf("NAO SEGUE A CELEBRIDADE\n\n");
+            continue;
         }
         
-        free(visitado);
-        free(predecessor);
-        free(arestaUsada);
+        // O caminho existe. Reconstruir e imprimir.
+        // O caminho é reconstruído do seguidor (i) até a celebridade (indiceCelebridade).
+        int atual = i;
+        
+        // Caminho do seguidor até a celebridade.
+        while (atual != indiceCelebridade) {
+            int vAtual = atual;
+            int vProx = predecessor[atual]; // O próximo passo em direção à celebridade
+            
+            // O caminho no grafo original é (vAtual -> vProx).
+            // A aresta (vProx -> vAtual) do G^T é a aresta (vAtual -> vProx) do G.
+            Aresta *aresta_gt = arestaUsada[atual];
+            
+            // 4. Imprimir no formato (Pessoa_A, Pessoa_B, DataInicio, DataFim, GrauAmizade)
+            // Pessoa A (seguidor) -> Pessoa B (seguido)
+            printf("%s, ", grafo->vertices[vAtual].nomeUsuario); // Quem Segue (Origem)
+            printf("%s, ", grafo->vertices[vProx].nomeUsuario);  // Quem É Seguido (Destino)
+            
+            // Os dados da aresta em G^T são (dataInicio, dataFim, grauAmizade) da relação original (vAtual -> vProx)
+            printf("%s, ", aresta_gt->dataInicio);
+            printf("%s, ", aresta_gt->dataFim);
+            
+            if (aresta_gt->grauAmizade == LIXO_CHAR) {
+                printf("NULO\n");
+            } else {
+                printf("%c\n", aresta_gt->grauAmizade);
+            }
+            
+            atual = vProx; // Próximo nó no caminho em direção à celebridade
+        }
+        
+        printf("\n");
     }
     
     // Liberar memória
+    free(distancia);
+    free(predecessor);
+    free(arestaUsada);
     liberarGrafo(grafo);
 }
-
 
 /*
 Funcionalidade 14: Comprimento do ciclo da fofoca (BFS).
