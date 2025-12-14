@@ -1171,7 +1171,6 @@ void caminhoParaCelebridade(char *arquivoPessoa, char *arquivoIndexaPessoa, char
         
         // Se a distância é -1, não há caminho.
         if (distancia[i] == -1) {
-            printf("NAO SEGUE A CELEBRIDADE\n\n");
             continue;
         }
         
